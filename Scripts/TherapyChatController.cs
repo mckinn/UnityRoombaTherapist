@@ -142,7 +142,7 @@ public class TherapyChatController : MonoBehaviour
 
             if (changed)
             {
-                string message = $"[{current.entity_type} -> {current.emotion} ({current.strength:F1})]";
+                string message = $"[{current.entity_type} -> {current.emotion} ({current.strength:F2})]";
                 Color color = emotionColors.TryGetValue(current.emotion, out Color c) ? c : Color.white;
                 DisplayLeftMessage(message, color);
             }

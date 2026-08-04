@@ -35,9 +35,9 @@ public class CollisionController : MonoBehaviour
 
     private EmotionState BuildEmotionState(string entityId, string entityType)
     {
-        foreach (EntitySensitivity sensitivity in SessionManager.Instance.EntitySensitivities)
+        EntitySensitivity sensitivity = SessionManager.Instance.GetSensitivity(entityType);
         {
-            if (sensitivity.entity_type == entityType)
+            if (sensitivity?.entity_type == entityType)
             {
                 return new EmotionState
                 {
