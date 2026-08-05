@@ -11,33 +11,42 @@ using UnityEngine;
 /// at all. Direction, actual translation, and Arousal-driven speed are all
 /// later steps.
 ///
-/// This is a separate component from CollisionController on purpose.
-/// CollisionController's job is reporting events upstream to the
-/// Orchestrator/LLM - an async "tell the therapist what happened" concern.
-/// This script's job is the Unity-local ANS response - an immediate
-/// "decide what the body does" concern (see Architecture Decision Summary
-/// #2: Unity executes movement immediately, without waiting on the
-/// Orchestrator). Both react to the same physical collision but serve
-/// different layers of the architecture, so they're kept apart rather than
-/// merged into one component that does both jobs.
+/// Subscribes to CollisionController.OnEntityCollision rather than
+/// declaring its own OnCollisionEnter - there is exactly one physics entry
+/// point for "collided with a tracked entity" (CollisionController), and
+/// everything downstream, including this script, reacts to that single
+/// event instead of each independently hooking the same physical concept.
 /// </summary>
 public class JourneyCalculator : MonoBehaviour
 {
+    [Tooltip("The CollisionController that owns the physical OnCollisionEnter event.")]
+    [SerializeField] private CollisionController collisionController;
+
     [Tooltip("The per-emotion L/H distance bounds asset.")]
     [SerializeField] private EmotionMovementConfig movementConfig;
 
-    private void OnCollisionEnter(Collision collision)
+    private void OnEnable()
     {
-        EntityIdentity identity = collision.gameObject.GetComponent<EntityIdentity>();
-
-        if (identity == null)
+        if (collisionController != null)
         {
-            return; // not a tracked entity (e.g. a wall)
+            collisionController.OnEntityCollision += HandleEntityCollision;
         }
+        else
+        {
+            Debug.LogWarning("JourneyCalculator has no CollisionController assigned - it will never receive collision events.");
+        }
+    }
 
-        Debug.Log($"JourneyCalculator: entering OnCollisionEnter - {collision.gameObject.tag.ToLower()}");
+    private void OnDisable()
+    {
+        if (collisionController != null)
+        {
+            collisionController.OnEntityCollision -= HandleEntityCollision;
+        }
+    }
 
-        string entityType = collision.gameObject.tag.ToLower();
+    private void HandleEntityCollision(EntityIdentity identity, string entityType, Vector3 contactPoint)
+    {
         EntitySensitivity sensitivity = SessionManager.Instance.GetSensitivity(entityType);
 
         if (sensitivity == null)

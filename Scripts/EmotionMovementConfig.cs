@@ -78,4 +78,24 @@ public class EmotionMovementConfig : ScriptableObject
         }
         return b.L + strength * (b.H - b.L);
     }
+
+
+    [Header("Deadband (epsilon)")]
+    [Tooltip("The largest possible per-tick closing speed across all emotions/entities - i.e. the maximum output of the eventual Arousal-to-ClosingSpeed mapping. Placeholder until that mapping is built; revisit this value when it is.")]
+    [SerializeField] private float maxClosingSpeed = 2.0f;
+
+    [Tooltip("Multiplier applied on top of the theoretical minimum epsilon, so the deadband isn't sized at the exact knife-edge of being skippable.")]
+    [SerializeField] private float epsilonSafetyFactor = 1.5f;
+
+    /// <summary>
+    /// The deadband half-width: how close to D counts as "resolved". Derived
+    /// from maxClosingSpeed rather than set independently, so that tuning
+    /// closing speed upward can't silently make the deadband skippable
+    /// without also moving epsilon - the two are kept structurally coupled
+    /// instead of relying on someone remembering to update both by hand.
+    /// </summary>
+    public float ComputeEpsilon()
+    {
+        return maxClosingSpeed * Time.fixedDeltaTime * epsilonSafetyFactor;
+    }
 }
