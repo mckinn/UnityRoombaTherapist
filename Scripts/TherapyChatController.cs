@@ -115,10 +115,10 @@ public class TherapyChatController : MonoBehaviour
     private readonly Dictionary<string, Color> emotionColors = new Dictionary<string, Color>
     {
         { "fear", Color.red },
-        { "ambivalence", Color.gray },
+        { "ambivalence", Color.white },
         { "curiosity", Color.yellow },
         { "joy", Color.green },
-        { "disgust", new Color(0.5f, 0f, 0.5f) },
+        { "disgust", Color.purple},
         { "none", Color.white }
     };
 

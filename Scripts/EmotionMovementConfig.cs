@@ -44,7 +44,7 @@ public class EmotionMovementConfig : ScriptableObject
         // Ambivalence's "+/- Random" component isn't implemented yet - using
         // a flat midpoint for now. Worth a separate discussion on how/where
         // randomization should apply before this one is trusted.
-        new EmotionDistanceBounds { emotion = "ambivalence", L = 0f, H = 0f  },
+        new EmotionDistanceBounds { emotion = "ambivalence", L = 5f, H = 5f  },
     };
 
     /// <summary>
@@ -79,23 +79,56 @@ public class EmotionMovementConfig : ScriptableObject
         return b.L + strength * (b.H - b.L);
     }
 
-
     [Header("Deadband (epsilon)")]
-    [Tooltip("The largest possible per-tick closing speed across all emotions/entities - i.e. the maximum output of the eventual Arousal-to-ClosingSpeed mapping. Placeholder until that mapping is built; revisit this value when it is.")]
-    [SerializeField] private float maxClosingSpeed = 2.0f;
 
     [Tooltip("Multiplier applied on top of the theoretical minimum epsilon, so the deadband isn't sized at the exact knife-edge of being skippable.")]
     [SerializeField] private float epsilonSafetyFactor = 1.5f;
 
     /// <summary>
     /// The deadband half-width: how close to D counts as "resolved". Derived
-    /// from maxClosingSpeed rather than set independently, so that tuning
-    /// closing speed upward can't silently make the deadband skippable
-    /// without also moving epsilon - the two are kept structurally coupled
-    /// instead of relying on someone remembering to update both by hand.
+    /// from MaxClosingSpeed (the true ceiling, regardless of current Arousal)
+    /// rather than set independently, so that tuning closing speed upward
+    /// can't silently make the deadband skippable without also moving
+    /// epsilon - the two are kept structurally coupled instead of relying on
+    /// someone remembering to update both by hand.
     /// </summary>
     public float ComputeEpsilon()
     {
         return maxClosingSpeed * Time.fixedDeltaTime * epsilonSafetyFactor;
+    }
+
+    [Header("Arousal -> Closing Speed")]
+    [Tooltip("Speed used at the calmest end of Arousal, and as the default whenever PAD state isn't known yet (e.g. before a session's first response has landed).")]
+    [SerializeField] private float minClosingSpeed = 0.5f;
+
+    [Tooltip("Speed used at the most aroused end of Arousal. This is also the ceiling ComputeEpsilon() is derived from - the true worst case, regardless of current PAD state.")]
+    [SerializeField] private float maxClosingSpeed = 2.0f;
+
+    [Tooltip("If true (assumed default): high Arousal => fast closing speed (maxClosingSpeed), low/negative Arousal => slow (minClosingSpeed). Flip if it plays backwards from what you'd expect.")]
+    [SerializeField] private bool highArousalMeansFastClosing = true;
+
+    /// <summary>
+    /// Speed used at the calmest end of Arousal, and the value the null-PAD
+    /// fallback should use directly (see JourneyCalculator) - not the
+    /// midpoint, the actual lower bound.
+    /// </summary>
+    public float MinClosingSpeed => minClosingSpeed;
+
+    public float MaxClosingSpeed => maxClosingSpeed;
+    /// <summary>
+    /// Maps current Arousal (-1..1) to a closing speed within
+    /// [minClosingSpeed, maxClosingSpeed]. Used for BOTH Journey-driven
+    /// movement and manual/keyboard movement - the Roomba's overall
+    /// responsiveness is a function of its emotional arousal regardless of
+    /// what's currently deciding its direction.
+    /// </summary>
+    public float ComputeClosingSpeed(float arousal)
+    {
+        float normalized = Mathf.Clamp01((arousal + 1f) / 2f); // -1..1 -> 0..1, 1 = most aroused
+        if (!highArousalMeansFastClosing)
+        {
+            normalized = 1f - normalized;
+        }
+        return Mathf.Lerp(minClosingSpeed, maxClosingSpeed, normalized);
     }
 }

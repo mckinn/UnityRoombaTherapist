@@ -3,8 +3,14 @@ using UnityEngine.InputSystem;
 
 /// <summary>
 /// Free planar (X/Z) movement. Move() takes a world-space direction directly -
-/// no turn-then-thrust coupling - so player input and a future Journey/Behavior
-/// system can drive the same Rigidbody through the same primitive.
+/// no turn-then-thrust coupling - so player input and the Journey system can
+/// drive the same Rigidbody through the same primitive.
+///
+/// This is a pure motor: it does not read input and does not decide when to
+/// move. JourneyCalculator is the single authority that decides, each frame,
+/// whether to call Move() with an autonomous Journey direction or a manual
+/// fallback direction - never both, and never through two independent magic
+/// methods competing for the same frame.
 ///
 /// Orientation is a side effect of movement, not a control input: whenever the
 /// Roomba moves, it snaps instantly to face the direction it's moving in.
@@ -38,30 +44,15 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void FixedUpdate()
-    {
-        Vector3 moveInput = Vector3.zero;
-
-        if (Keyboard.current.upArrowKey.isPressed) moveInput.z += 1f;
-        if (Keyboard.current.downArrowKey.isPressed) moveInput.z -= 1f;
-        if (Keyboard.current.leftArrowKey.isPressed) moveInput.x -= 1f;
-        if (Keyboard.current.rightArrowKey.isPressed) moveInput.x += 1f;
-
-        if (moveInput.sqrMagnitude > 0f)
-        {
-            Move(moveInput);
-        }
-    }
-
     /// <summary>
     /// Moves directly along a world-space direction (X/Z plane only - the Y
     /// component is ignored; use Jump() for vertical motion). Direction does
     /// not need to be pre-normalized. Snaps facing to match.
     ///
-    /// Callable by player input now, and by the Journey/Behavior system later
-    /// once it exists - same primitive either way, no player-vs-NPC branching.
+    /// Callable by player input or by the Journey/Behavior system - same
+    /// primitive either way, no player-vs-NPC branching inside this method.
     /// </summary>
-    public void Move(Vector3 direction)
+    public void Move(Vector3 direction, float? speedOverride = null)
     {
         direction.y = 0f;
         if (direction.sqrMagnitude < 0.0001f)
@@ -70,7 +61,8 @@ public class PlayerController : MonoBehaviour
         }
         direction.Normalize();
 
-        Vector3 movement = direction * speed * Time.fixedDeltaTime;
+        float effectiveSpeed = speedOverride ?? speed;
+        Vector3 movement = direction * effectiveSpeed * Time.fixedDeltaTime;
         rb.MovePosition(rb.position + movement);
 
         rb.MoveRotation(Quaternion.LookRotation(direction, Vector3.up));
