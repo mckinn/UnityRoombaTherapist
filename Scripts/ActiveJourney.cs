@@ -28,4 +28,5 @@ public class ActiveJourney
     public float DestinationDistance;   // D = L + V * (H - L)
     public Vector3 LastKnownPosition;   // contact point, refreshed on each new collision with this entity
     public bool Resolved;               // set by the per-frame distance check Step 2 will add
+    public int ResolvedSequence;        // stamped when Resolved flips true - used to pick the most recently settled emotion when several are resolved simultaneously (Step 6, stable-state Behavior selection)
 }

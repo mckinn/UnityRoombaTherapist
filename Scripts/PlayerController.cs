@@ -61,7 +61,7 @@ public class PlayerController : MonoBehaviour
         }
         direction.Normalize();
 
-        float effectiveSpeed = speedOverride ?? speed;
+        float effectiveSpeed = (speedOverride ?? 1f) * speed;
         Vector3 movement = direction * effectiveSpeed * Time.fixedDeltaTime;
         rb.MovePosition(rb.position + movement);
 
@@ -77,5 +77,23 @@ public class PlayerController : MonoBehaviour
     {
         if (force < 0f) force = jumpForce;
         rb.AddForce(Vector3.up * force, ForceMode.VelocityChange);
+    }
+
+    /// <summary>
+    /// Moves directly to an absolute world position (X/Z only - the Y
+    /// component is ignored, current height is preserved; use Jump() for
+    /// vertical motion). Unlike Move(), does not change facing - callers
+    /// driving a positional pattern (e.g. BehaviorController) are
+    /// responsible for orientation if they want any.
+    ///
+    /// Separate primitive from Move() on purpose: Move() is "go this
+    /// direction at this speed" (Journey/keyboard); MoveTo() is "be at this
+    /// exact place right now" (Behavior patterns). Different callers, same
+    /// motor, same single point of Rigidbody ownership.
+    /// </summary>
+    public void MoveTo(Vector3 worldPosition)
+    {
+        worldPosition.y = rb.position.y;
+        rb.MovePosition(worldPosition);
     }
 }

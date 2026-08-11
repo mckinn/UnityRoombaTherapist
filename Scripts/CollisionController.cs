@@ -6,6 +6,12 @@ public class CollisionController : MonoBehaviour
 {
     [SerializeField] private TherapyChatController chatController;
 
+    [Header("Arena Event Rate Limiting")]
+    [Tooltip("Minimum seconds between /arena/event POSTs to the Orchestrator. Each POST triggers a real LLM API call, which costs real money and time regardless of how fast collisions are physically happening - this caps that rate globally, independent of which entity triggered it. The local ANS reaction (OnEntityCollision -> Journey/Behavior) is NOT rate-limited by this; only the remote report is skipped.")]
+    [SerializeField] private float minSecondsBetweenArenaEvents = 2.0f;
+
+    private float lastArenaEventTime = float.NegativeInfinity;
+
     /// <summary>
     /// Fired synchronously, immediately on physical contact with a tracked
     /// entity - before any network round trip to the Orchestrator. This is
@@ -33,10 +39,18 @@ public class CollisionController : MonoBehaviour
         // it touched something.
         Vector3 contactPoint = collision.GetContact(0).point;
 
-        // Fire the local event first and synchronously - the ANS-layer
-        // reaction (JourneyCalculator, eventually actual movement) must not
-        // wait on the Orchestrator round trip that follows.
+        // Fire the local event first and synchronously, unconditionally -
+        // the ANS-layer reaction must not wait on, or be limited by, the
+        // Orchestrator round trip that follows.
         OnEntityCollision?.Invoke(identity, entityType, contactPoint);
+
+        if (Time.time - lastArenaEventTime < minSecondsBetweenArenaEvents)
+        {
+            Debug.Log($"CollisionController: arena event rate-limited, skipping report for entity_type '{entityType}' " +
+                      $"({Time.time - lastArenaEventTime:F2}s since last report, limit {minSecondsBetweenArenaEvents:F2}s).");
+            return;
+        }
+        lastArenaEventTime = Time.time;
 
         _ = ReportEventAsync(entityId, entityType);
     }

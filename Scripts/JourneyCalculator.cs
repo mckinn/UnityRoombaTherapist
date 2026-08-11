@@ -34,8 +34,30 @@ public class JourneyCalculator : MonoBehaviour
     [Tooltip("The per-emotion L/H distance bounds asset.")]
     [SerializeField] private EmotionMovementConfig movementConfig;
 
+    [Header("Behavior (Step 6)")]
+    [Tooltip("The Behavior pattern renderer this script hands control to once the Roomba is fully stable.")]
+    [SerializeField] private BehaviorController behaviorController;
+
+    /// <summary>
+    /// The resolved journey to currently express, or null if anything is
+    /// still unresolved (mid-pursuit) or nothing has ever resolved yet.
+    /// Behavior only ever runs once EVERYTHING tracked is resolved - the
+    /// two states (pursuing vs. expressing) are mutually exclusive by
+    /// construction, so there's no authority conflict to arbitrate: a fresh
+    /// collision un-resolving an entity drops this back to null next frame,
+    /// handing control straight back to Journey pursuit with no special
+    /// interruption handling needed.
+    ///
+    /// Among several simultaneously-resolved entities, the most recently
+    /// resolved one wins (ActiveJourney.ResolvedSequence) - weight_i can't
+    /// rank them, since resolved entries are all ~0 error by definition.
+    /// </summary>
+    public ActiveJourney StableExpressionJourney { get; private set; }
+
+    private int resolutionSequenceCounter = 0;
+
     [Header("Debug")]
-    [Tooltip("Testing aid: when true, keyboard input is added on top of the blended Journey movement instead of being ignored. Lets you mock the effect of an additional simultaneous movement source (e.g. a future Behavior pattern) before Step 6 actually produces one. Leave false for normal play - this deliberately reintroduces the authority conflict the single-caller design otherwise prevents.")]
+    [Tooltip("Testing aid: when true, keyboard input is added on top of the blended Journey movement instead of being ignored. Lets you mock the effect of an additional simultaneous movement source before Step 7 actually produces one. Leave false for normal play - this deliberately reintroduces the authority conflict the single-caller design otherwise prevents.")]
     [SerializeField] private bool allowManualNudgeDuringJourney = false;
 
     private readonly Dictionary<string, ActiveJourney> activeJourneys = new Dictionary<string, ActiveJourney>();
@@ -71,6 +93,19 @@ public class JourneyCalculator : MonoBehaviour
             // Expected on genuinely first contact with an entity_type the
             // Orchestrator hasn't seeded yet - not a bug.
             Debug.Log($"JourneyCalculator: no sensitivity known yet for entity_type '{entityType}'.");
+            return;
+        }
+
+        if (sensitivity.emotion == "none")
+        {
+            // The Orchestrator has seeded this entity_type but hasn't
+            // formed a real opinion about it yet (server-side seeding on
+            // first-ever contact). Treated the same as "no sensitivity
+            // known" - no reaction, not a reaction targeting distance
+            // zero. Without this, ComputeDestinationDistance("none", ...)
+            // returns 0, and the Roomba tries to close to exactly zero
+            // distance from the entity forever - the erratic-movement bug.
+            Debug.Log($"JourneyCalculator: entity_type '{entityType}' has no formed emotion yet ('none') - ignoring.");
             return;
         }
 
@@ -119,6 +154,26 @@ public class JourneyCalculator : MonoBehaviour
 
         Vector3 blendedDirection = ComputeBlendedJourneyDirection();
 
+        if (StableExpressionJourney != null)
+        {
+            // Fully stable - nothing currently unresolved. Keyboard
+            // immediately interrupts idle expression (lower priority than
+            // the player actually wanting to drive). BehaviorController is
+            // ticked every frame regardless of which - it needs to know
+            // playerIsDriving to keep its anchor synced while overridden,
+            // so resuming afterward doesn't snap.
+            Vector3 keyboardOverride = ReadKeyboardDirection();
+            bool playerIsDriving = keyboardOverride.sqrMagnitude > 0f;
+
+            if (playerIsDriving)
+            {
+                playerController.Move(keyboardOverride, closingSpeed);
+            }
+
+            behaviorController.ApplyPattern(StableExpressionJourney, playerIsDriving);
+            return;
+        }
+
         if (blendedDirection != Vector3.zero)
         {
             // Capped at MaxClosingSpeed by ComputeClosingSpeed itself - the
@@ -158,31 +213,44 @@ public class JourneyCalculator : MonoBehaviour
     {
         Vector3 weightedSum = Vector3.zero;
         float totalWeight = 0f;
+        ActiveJourney mostRecentlyResolved = null;
 
         foreach (KeyValuePair<string, ActiveJourney> kvp in activeJourneys)
         {
             ActiveJourney journey = kvp.Value;
+
             if (journey.Resolved)
             {
+                if (mostRecentlyResolved == null || journey.ResolvedSequence > mostRecentlyResolved.ResolvedSequence)
+                {
+                    mostRecentlyResolved = journey;
+                }
                 continue;
             }
 
             (Vector3 direction, float weight) = EvaluateJourney(journey);
             if (journey.Resolved)
             {
-                // Resolved during this frame's evaluation - contributes
-                // nothing, same as one that was already resolved.
+                // Just resolved during this frame's evaluation.
+                if (mostRecentlyResolved == null || journey.ResolvedSequence > mostRecentlyResolved.ResolvedSequence)
+                {
+                    mostRecentlyResolved = journey;
+                }
                 continue;
             }
 
-            weightedSum += direction* weight;
+            weightedSum += direction * weight;
             totalWeight += weight;
         }
 
+        // Only express once EVERYTHING tracked is resolved - see
+        // StableExpressionJourney doc comment.
+        StableExpressionJourney = (totalWeight <= 0.0001f) ? mostRecentlyResolved : null;
+
         if (totalWeight <= 0.0001f)
-           {
-                return Vector3.zero;
-            }
+        {
+            return Vector3.zero;
+        }
 
         return weightedSum.normalized;
     }
@@ -223,7 +291,8 @@ public class JourneyCalculator : MonoBehaviour
         if (Mathf.Abs(error) <= epsilon)
         {
             journey.Resolved = true;
-            return ( Vector3.zero, 0f );
+            journey.ResolvedSequence = ++resolutionSequenceCounter;
+            return (Vector3.zero, 0f);
         }
 
         Vector3 directionAway = d > 0.0001f ? awayFromEntity / d : transform.forward;
@@ -232,7 +301,7 @@ public class JourneyCalculator : MonoBehaviour
 
         Vector3 direction = directionAway * Mathf.Sign(error);
         float weight = Mathf.Abs(error);
-        
+
         return (direction, weight);
     }
 

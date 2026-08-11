@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7c2c048978731a748af1148e121d6a1c, type: 3}
   m_Name: BehaviorExpressionConfig
   m_EditorClassIdentifier: Assembly-CSharp::BehaviorExpressionConfig
-  minPatternSpeed: 0.5
-  maxPatternSpeed: 2
-  minPatternSize: 0.5
-  maxPatternSize: 2
+  minPatternSpeed: 0.3
+  maxPatternSpeed: 1
+  minPatternSize: 0.1
+  maxPatternSize: 1
