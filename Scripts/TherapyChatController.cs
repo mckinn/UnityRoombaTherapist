@@ -115,10 +115,10 @@ public class TherapyChatController : MonoBehaviour
     private readonly Dictionary<string, Color> emotionColors = new Dictionary<string, Color>
     {
         { "fear", Color.red },
-        { "ambivalence", Color.gray },
+        { "ambivalence", Color.white },
         { "curiosity", Color.yellow },
         { "joy", Color.green },
-        { "disgust", new Color(0.5f, 0f, 0.5f) },
+        { "disgust", Color.purple},
         { "none", Color.white }
     };
 
@@ -142,7 +142,7 @@ public class TherapyChatController : MonoBehaviour
 
             if (changed)
             {
-                string message = $"[{current.entity_type} -> {current.emotion} ({current.strength:F1})]";
+                string message = $"[{current.entity_type} -> {current.emotion} ({current.strength:F2})]";
                 Color color = emotionColors.TryGetValue(current.emotion, out Color c) ? c : Color.white;
                 DisplayLeftMessage(message, color);
             }

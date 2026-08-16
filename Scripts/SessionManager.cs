@@ -41,6 +41,33 @@ public class SessionManager : MonoBehaviour
         Debug.Log($"SessionManager UpdateState - PAD: {JsonConvert.SerializeObject(CurrentPad)}");
     }
 
+    /// <summary>
+    /// Looks up the current sensitivity for a given entity_type, or null if
+    /// nothing is known yet (including the case where EntitySensitivities
+    /// itself hasn't been populated yet). This is the single shared lookup
+    /// against the single source of truth - both CollisionController
+    /// (reporting events to the Orchestrator) and JourneyCalculator (local
+    /// ANS movement) call this rather than each maintaining their own copy
+    /// of the same search.
+    /// </summary>
+    public EntitySensitivity GetSensitivity(string entityType)
+    {
+        if (EntitySensitivities == null)
+        {
+            return null;
+        }
+
+        foreach (EntitySensitivity sensitivity in EntitySensitivities)
+        {
+            if (sensitivity.entity_type == entityType)
+            {
+                return sensitivity;
+            }
+        }
+
+        return null;
+    }
+
     public async Awaitable StartSession(string roombaId)
     {
         SessionStartRequest requestBody = new SessionStartRequest { roomba_id = roombaId };
