@@ -38,6 +38,9 @@ public class JourneyCalculator : MonoBehaviour
     [Tooltip("The Behavior pattern renderer this script hands control to once the Roomba is fully stable.")]
     [SerializeField] private BehaviorController behaviorController;
 
+    [Tooltip("Master on/off switch for Behavior pattern motion. Disabled by default while the color-based expression prototype (EmotionColorIndicator) is being evaluated instead - the procedural motion patterns were found confusing rather than clarifying in play-testing. This is the single point that decides whether BehaviorController.ApplyPattern ever actually gets called; unlike unchecking the BehaviorController component's own enabled checkbox, this reliably stops it, since ApplyPattern is called directly rather than through a Unity magic method. All Behavior code/config is preserved and can be re-enabled here at any time.")]
+    [SerializeField] private bool behaviorMotionEnabled = false;
+
     /// <summary>
     /// The resolved journey to currently express, or null if anything is
     /// still unresolved (mid-pursuit) or nothing has ever resolved yet.
@@ -170,7 +173,11 @@ public class JourneyCalculator : MonoBehaviour
                 playerController.Move(keyboardOverride, closingSpeed);
             }
 
-            behaviorController.ApplyPattern(StableExpressionJourney, playerIsDriving);
+            if (behaviorMotionEnabled)
+            {
+                behaviorController.ApplyPattern(StableExpressionJourney, playerIsDriving);
+            }
+            
             return;
         }
 
