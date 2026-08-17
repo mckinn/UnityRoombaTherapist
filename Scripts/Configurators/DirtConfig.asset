@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: df4ea88133af1c04cb14f4404b198333, type: 3}
+  m_Name: DirtConfig
+  m_EditorClassIdentifier: Assembly-CSharp::DirtConfig
+  minCircles: 4
+  maxCircles: 7
+  minCircleRadius: 0.05
+  maxCircleRadius: 0.12
+  maxCircleOffset: 0.08
+  circleSegments: 8
+  yOffset: 0.005
+  colliderPadding: 0.05
+  dirtMaterial: {fileID: 2100000, guid: 4017f5ad4de594c3ab070ff3bf6cc9c5, type: 2}
