@@ -29,4 +29,14 @@ public class ActiveJourney
     public Vector3 LastKnownPosition;   // contact point, refreshed on each new collision with this entity
     public bool Resolved;               // set by the per-frame distance check Step 2 will add
     public int ResolvedSequence;        // stamped when Resolved flips true - used to pick the most recently settled emotion when several are resolved simultaneously (Step 6, stable-state Behavior selection)
+
+    // Stuck recovery (see JourneyCalculator's per-journey stuck detection
+    // and JourneyStuckRecovery). All four reset on a fresh collision with
+    // this entity, whether that's this journey's creation or a re-trigger
+    // of an existing one - a new collision restarts the pursuit, including
+    // any in-progress recovery episode.
+    public Vector3? RedirectTarget;     // set once stuck-recovery has chosen an alternate point on the D-radius circle to approach from; null = pure radial pursuit (the default, unmodified behavior)
+    public Vector3 StuckTrackingBaseline; // position snapshot used to detect lack of net progress toward the current target (radial or redirect)
+    public float StuckTimer;            // seconds of no net progress against StuckTrackingBaseline
+    public object RecoveryState;        // opaque to ActiveJourney - owned and interpreted only by whatever recovery strategy is currently in use (JourneyStuckRecovery today)
 }

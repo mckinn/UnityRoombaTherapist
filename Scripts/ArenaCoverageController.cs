@@ -83,9 +83,54 @@ public class ArenaCoverageController : MonoBehaviour
 
         Grid = new CoverageGrid(arenaBounds.min, cellSize, widthInCells, depthInCells);
 
+        MarkOffFloorCellsBlocked();
+
         Debug.Log($"ArenaCoverageController: built {widthInCells} x {depthInCells} cell grid " +
                   $"(cellSize={cellSize:F4}) from arena bounds {arenaBounds.size.x:F2} x {arenaBounds.size.z:F2} " +
                   $"world units, origin {arenaBounds.min}.");
+    }
+
+    /// <summary>
+    /// Marks any cell whose center doesn't actually fall on real Floor-
+    /// tagged geometry as Blocked at construction time - see Planning.md,
+    /// "Cells outside the walls". The grid's rectangular extent is the
+    /// bounding box of everything under floorsAndWalls (walls included),
+    /// but the room itself can be irregularly shaped, so not every cell in
+    /// that rectangle is real floor. Reuses FloorGeometryUtility.
+    /// IsPointOnFloor - the same check DirtScatterer already uses - so
+    /// both systems agree on what counts as floor rather than maintaining
+    /// two separate notions of it.
+    ///
+    /// This directly matters for Clean/Map (step 3): without it, the
+    /// coverage planner could select a "nearest Unknown" target that's
+    /// actually outside the room (or inside wall thickness), and the
+    /// Roomba would push against the wall trying to reach it, with no
+    /// collision event ever firing to correct course (walls have no
+    /// EntityIdentity and so never raise CollisionController's collision
+    /// event, by design). Marking these cells Blocked up front means BFS
+    /// never selects them as a target in the first place.
+    /// </summary>
+    private void MarkOffFloorCellsBlocked()
+    {
+        int blockedCount = 0;
+
+        for (int x = 0; x < Grid.WidthInCells; x++)
+        {
+            for (int z = 0; z < Grid.DepthInCells; z++)
+            {
+                Vector2Int cell = new Vector2Int(x, z);
+                Vector3 worldCenter = Grid.CellToWorldCenter(cell, 0f); // Y is ignored by IsPointOnFloor
+
+                if (!FloorGeometryUtility.IsPointOnFloor(worldCenter, floorsAndWalls))
+                {
+                    Grid.MarkBlocked(cell);
+                    blockedCount++;
+                }
+            }
+        }
+
+        Debug.Log($"ArenaCoverageController: marked {blockedCount} off-floor cell(s) Blocked out of " +
+                  $"{Grid.WidthInCells * Grid.DepthInCells} total.");
     }
 
     private void OnDrawGizmos()

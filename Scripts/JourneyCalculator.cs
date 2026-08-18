@@ -63,6 +63,22 @@ public class JourneyCalculator : MonoBehaviour
     [Tooltip("Testing aid: when true, keyboard input is added on top of the blended Journey movement instead of being ignored. Lets you mock the effect of an additional simultaneous movement source before Step 7 actually produces one. Leave false for normal play - this deliberately reintroduces the authority conflict the single-caller design otherwise prevents.")]
     [SerializeField] private bool allowManualNudgeDuringJourney = false;
 
+    [Header("Clean/Map (Step 3)")]
+    [Tooltip("Drives autonomous coverage movement when nothing else (Journey, keyboard, Behavior pattern motion) wants to move the Roomba this frame. Lowest priority in the dispatch - see DriveCleanMap and CleanMapController's own header comment.")]
+    [SerializeField] private CleanMapController cleanMapController;
+
+    [Header("Journey Stuck Recovery")]
+    [Tooltip("If a Journey makes less than Journey Stuck Progress Threshold of net movement for this many seconds, it's considered stuck and a recovery redirect is triggered (see JourneyStuckRecovery). Per-journey, not shared - multiple simultaneously active journeys are tracked independently.")]
+    [SerializeField] private float journeyStuckTimeThreshold = 1.5f;
+
+    [Tooltip("Minimum net distance (world units) a Journey must move, relative to where its stuck-tracking baseline was last set, to NOT be considered stuck.")]
+    [SerializeField] private float journeyStuckProgressThreshold = 0.05f;
+
+    [Tooltip("Angular step size (degrees) applied per stuck retry within the same recovery episode - see JourneyStuckRecovery's persistent-handedness stepping.")]
+    [SerializeField] private float journeyRecoveryStepDegrees = 45f;
+
+    private readonly JourneyStuckRecovery stuckRecovery = new JourneyStuckRecovery();
+
     private readonly Dictionary<string, ActiveJourney> activeJourneys = new Dictionary<string, ActiveJourney>();
 
     public IReadOnlyDictionary<string, ActiveJourney> ActiveJourneys => activeJourneys;
@@ -124,6 +140,10 @@ public class JourneyCalculator : MonoBehaviour
             journey.DestinationDistance = destinationDistance;
             journey.LastKnownPosition = contactPoint;
             journey.Resolved = false;
+            journey.RedirectTarget = null;
+            journey.RecoveryState = null;
+            journey.StuckTrackingBaseline = transform.position;
+            journey.StuckTimer = 0f;
         }
         else
         {
@@ -135,7 +155,11 @@ public class JourneyCalculator : MonoBehaviour
                 Strength = sensitivity.strength,
                 DestinationDistance = destinationDistance,
                 LastKnownPosition = contactPoint,
-                Resolved = false
+                Resolved = false,
+                RedirectTarget = null,
+                RecoveryState = null,
+                StuckTrackingBaseline = transform.position,
+                StuckTimer = 0f
             };
             activeJourneys[entityId] = journey;
         }
@@ -177,7 +201,14 @@ public class JourneyCalculator : MonoBehaviour
             {
                 behaviorController.ApplyPattern(StableExpressionJourney, playerIsDriving);
             }
-            
+            else if (!playerIsDriving)
+            {
+                // Nothing else wants this frame: no Behavior pattern motion
+                // active, and the player isn't overriding. Clean/Map takes
+                // the fallback that used to just do nothing here.
+                DriveCleanMap(closingSpeed);
+            }
+
             return;
         }
 
@@ -205,6 +236,37 @@ public class JourneyCalculator : MonoBehaviour
                 // property of its emotional state, not of who's steering.
                 playerController.Move(keyboardInput, closingSpeed);
             }
+            else if (blendedDirection == Vector3.zero)
+            {
+                // True fresh idle (no active journey at all, not even a
+                // debug-nudge situation) and no keyboard input either.
+                // Explicit blendedDirection check, not just "we're inside
+                // this block" - allowManualNudgeDuringJourney could put us
+                // here while a real journey IS active, and Clean/Map must
+                // never contend with that.
+                DriveCleanMap(closingSpeed);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Asks CleanMapController for a direction and drives it through the
+    /// same single Move() primitive everything else uses, at the same
+    /// Arousal-scaled speed. No-ops if cleanMapController isn't assigned or
+    /// has nothing to offer (coverage complete, or not yet ready) - callers
+    /// don't need to check either case themselves.
+    /// </summary>
+    private void DriveCleanMap(float closingSpeed)
+    {
+        if (cleanMapController == null)
+        {
+            return;
+        }
+
+        Vector3? direction = cleanMapController.GetSteeringDirection();
+        if (direction.HasValue && direction.Value.sqrMagnitude > 0.0001f)
+        {
+            playerController.Move(direction.Value, closingSpeed);
         }
     }
 
@@ -299,6 +361,8 @@ public class JourneyCalculator : MonoBehaviour
         {
             journey.Resolved = true;
             journey.ResolvedSequence = ++resolutionSequenceCounter;
+            journey.RedirectTarget = null;
+            journey.RecoveryState = null;
             return (Vector3.zero, 0f);
         }
 
@@ -306,10 +370,64 @@ public class JourneyCalculator : MonoBehaviour
         directionAway.y = 0f;
         directionAway.Normalize();
 
-        Vector3 direction = directionAway * Mathf.Sign(error);
+        Vector3 radialDirection = directionAway * Mathf.Sign(error);
+
+        CheckJourneyStuckAndMaybeRedirect(journey, roombaPos, entityPos, radialDirection);
+
+        Vector3 direction;
+        if (journey.RedirectTarget.HasValue)
+        {
+            Vector3 toRedirect = journey.RedirectTarget.Value - roombaPos;
+            // Extremely unlikely (would mean sitting exactly on the
+            // redirect point without having resolved the actual distance
+            // goal) but guarded rather than risking a zero-direction Move
+            // call - falls back to the plain radial direction for this
+            // one tick only; RedirectTarget itself is left alone; a fresh
+            // stuck check next tick will decide whether to advance it.
+            direction = toRedirect.sqrMagnitude > 0.0001f ? toRedirect.normalized : radialDirection;
+        }
+        else
+        {
+            direction = radialDirection;
+        }
+
         float weight = Mathf.Abs(error);
 
         return (direction, weight);
+    }
+
+    /// <summary>
+    /// Per-journey stuck detection. Tracks net movement against a baseline
+    /// snapshot; if too little progress accumulates for too long, asks
+    /// stuckRecovery for the next recovery target and stores it on the
+    /// journey. Resets the baseline/timer whenever real progress is made,
+    /// or whenever a new recovery target is chosen - each attempt (radial
+    /// or redirected) gets its own fresh progress window to prove itself
+    /// in, rather than being judged against a stale baseline from before.
+    /// </summary>
+    private void CheckJourneyStuckAndMaybeRedirect(ActiveJourney journey, Vector3 roombaPos, Vector3 entityPos, Vector3 currentDirection)
+    {
+        journey.StuckTimer += Time.fixedDeltaTime;
+
+        float netProgress = Vector3.Distance(roombaPos, journey.StuckTrackingBaseline);
+        if (netProgress >= journeyStuckProgressThreshold)
+        {
+            journey.StuckTrackingBaseline = roombaPos;
+            journey.StuckTimer = 0f;
+            return;
+        }
+
+        if (journey.StuckTimer >= journeyStuckTimeThreshold)
+        {
+            journey.RedirectTarget = stuckRecovery.GetNextRecoveryTarget(
+                journey, currentDirection, entityPos, journey.DestinationDistance, journeyRecoveryStepDegrees);
+
+            journey.StuckTrackingBaseline = roombaPos;
+            journey.StuckTimer = 0f;
+
+            Debug.LogWarning($"JourneyCalculator: journey for entity_id={journey.Entity?.GetOrAssignId()} " +
+                              $"stuck for {journeyStuckTimeThreshold:F1}s - stepping recovery angle, new target {journey.RedirectTarget.Value}.");
+        }
     }
 
     private Vector3 ReadKeyboardDirection()
