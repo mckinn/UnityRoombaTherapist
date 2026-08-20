@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 /// <summary>
@@ -49,6 +50,27 @@ public class CleanMapController : MonoBehaviour
 
     private CoveragePlanner planner;
     private bool loggedCompletion = false;
+
+    /// <summary>
+    /// Fired once, the first time coverage is detected complete. Subscribed
+    /// to by DirtProgressReporter for the one-time reachability correction
+    /// and unconditional final report (see Planning.md, "Dirt Cleanup and
+    /// Reporting").
+    /// </summary>
+    public event Action OnCoverageComplete;
+
+    /// <summary>
+    /// Queryable equivalent of OnCoverageComplete, for callers that need to
+    /// check the current state at an arbitrary later moment rather than
+    /// react the instant it happens - e.g. Managed Pause's resume
+    /// condition ("nothing_to_do"), which needs to ask this repeatedly,
+    /// every time a pause is about to end, not just once. Same underlying
+    /// fact as OnCoverageComplete and is_complete on the final dirt-
+    /// progress report - see Planning.md, "Managed Pause", for why this is
+    /// one boolean serving two access patterns, not two independently-
+    /// tracked ones.
+    /// </summary>
+    public bool IsCoverageComplete { get; private set; }
 
     private Vector2Int? stuckTrackingTargetCell;
     private Vector3 stuckTrackingBaselinePosition;
@@ -165,7 +187,9 @@ public class CleanMapController : MonoBehaviour
         if (!loggedCompletion)
         {
             loggedCompletion = true;
+            IsCoverageComplete = true;
             Debug.Log("CleanMapController: coverage complete - no reachable Unknown cell remains.");
+            OnCoverageComplete?.Invoke();
         }
     }
 }

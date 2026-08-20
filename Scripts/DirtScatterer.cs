@@ -1,13 +1,28 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 /// <summary>
-/// Scatters a target number of dirt patches across valid floor space at
-/// startup. Self-contained: builds each patch as a fresh GameObject at
-/// runtime (MeshFilter, MeshRenderer, DirtVisual, BoxCollider,
-/// DirtController all added via AddComponent) rather than requiring a
-/// hand-built prefab - one less manual Editor step, and DirtController's
-/// own Awake() handles its setup identically whether it was placed via a
-/// prefab or built this way.
+/// Scatters a target number of dirt patches across valid floor space.
+/// Self-contained: builds each patch as a fresh GameObject at runtime
+/// (MeshFilter, MeshRenderer, DirtVisual, BoxCollider, DirtController all
+/// added via AddComponent) rather than requiring a hand-built prefab - one
+/// less manual Editor step, and DirtController's own Awake() handles its
+/// setup identically whether it was placed via a prefab or built this way.
+///
+/// ScatterDirt() is public and safe to call more than once - each call
+/// clears any patches left over from a previous call before placing fresh
+/// ones, and OnScatterComplete fires again with the new count. This is
+/// what would let a future "reset for another run" feature just call
+/// ScatterDirt() again rather than needing its own placement logic - not
+/// implemented yet, but the door is left open cheaply. Start() calls it
+/// once automatically at scene load.
+///
+/// OnScatterComplete fires from Start(), not Awake() - see
+/// DirtProgressReporter, the current subscriber, for why that split
+/// matters (Awake-before-Start is a real Unity guarantee; Awake-before-
+/// another-component's-Awake is not).
 ///
 /// Placement validity deliberately does NOT query CoverageGrid /
 /// ArenaCoverageController - see the "last open design point" discussion
@@ -50,8 +65,31 @@ public class DirtScatterer : MonoBehaviour
     [SerializeField] private float placementHeightOffset = 0.01f;
 
     private bool loggedDiagnosticDetail = false;
+    private readonly List<GameObject> spawnedPatches = new List<GameObject>();
+
+    /// <summary>
+    /// How many patches are placed as of the most recent ScatterDirt() call.
+    /// </summary>
+    public int PlacedCount { get; private set; }
+
+    /// <summary>
+    /// Fired at the end of every ScatterDirt() call (including the initial
+    /// automatic one from Start()), with the new PlacedCount. Subscribe in
+    /// your own Awake() - see class summary for why that ordering matters.
+    /// </summary>
+    public event Action<int> OnScatterComplete;
 
     private void Start()
+    {
+        ScatterDirt();
+    }
+
+    /// <summary>
+    /// Clears any patches left over from a previous call, then places up to
+    /// targetDirtCount fresh ones and fires OnScatterComplete. Safe to call
+    /// more than once.
+    /// </summary>
+    public void ScatterDirt()
     {
         if (floorsAndWalls == null || dirtConfig == null)
         {
@@ -59,21 +97,36 @@ public class DirtScatterer : MonoBehaviour
             return;
         }
 
+        ClearExistingPatches();
+
         Bounds arenaBounds = ComputeArenaBounds();
         LogFloorTagDiagnostics();
         float floorSurfaceY = ComputeFloorSurfaceY();
-        int placed = 0;
 
         for (int i = 0; i < targetDirtCount; i++)
         {
             if (TryFindValidPoint(arenaBounds, floorSurfaceY, out Vector3 point))
             {
                 SpawnDirtPatch(point);
-                placed++;
+                PlacedCount++;
             }
         }
 
-        Debug.Log($"DirtScatterer: placed {placed} of {targetDirtCount} requested dirt patches.");
+        Debug.Log($"DirtScatterer: placed {PlacedCount} of {targetDirtCount} requested dirt patches.");
+        OnScatterComplete?.Invoke(PlacedCount);
+    }
+
+    private void ClearExistingPatches()
+    {
+        foreach (GameObject patch in spawnedPatches)
+        {
+            if (patch != null)
+            {
+                Destroy(patch);
+            }
+        }
+        spawnedPatches.Clear();
+        PlacedCount = 0;
     }
 
     /// <summary>
@@ -245,6 +298,7 @@ public class DirtScatterer : MonoBehaviour
         GameObject patch = new GameObject("DirtPatch");
         patch.transform.position = position;
         patch.transform.SetParent(transform);
+        spawnedPatches.Add(patch);
 
         patch.AddComponent<MeshFilter>();
         patch.AddComponent<MeshRenderer>();

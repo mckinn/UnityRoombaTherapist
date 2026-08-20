@@ -46,6 +46,7 @@ public class OrchestratorResponse
     public string dialog;
     public PADState pad;
     public List<EntitySensitivity> entity_sensitivities;
+    public bool should_pause;
 }
 
 [System.Serializable]
@@ -64,4 +65,6 @@ public class ArenaEventRequest
     public string event_type;
     public List<EmotionState> emotion_states;
     public string direction;
+    public float? percent_complete; // dirt_progress only
+    public bool? is_complete;       // dirt_progress only
 }

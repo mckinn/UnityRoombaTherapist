@@ -34,6 +34,14 @@ public class JourneyCalculator : MonoBehaviour
     [Tooltip("The per-emotion L/H distance bounds asset.")]
     [SerializeField] private EmotionMovementConfig movementConfig;
 
+    [Header("Managed Pause (Step 7, sub-phase 1)")]
+    [Tooltip("The Paused gate - checked first, before any other dispatch logic. See PauseController's own header comment and Planning.md, 'Managed Pause'. Sub-phase 1: only a debug manual trigger exists yet - real entry triggers (settle-detection, dialog activity, nothing_to_do, arena-entry, Orchestrator should_pause) come in later sub-phases, but the gate mechanism itself is real, not a stub.")]
+    [SerializeField] private PauseController pauseController;
+
+    [Header("Managed Pause (Step 7, sub-phase 2)")]
+    [Tooltip("Entry trigger 1: detects a Journey settling (all active Journeys just resolved) and calls Pause() - see JourneySettleDetector's own header comment for why this is called inline rather than independently ticked.")]
+    [SerializeField] private JourneySettleDetector journeySettleDetector;
+
     [Header("Behavior (Step 6)")]
     [Tooltip("The Behavior pattern renderer this script hands control to once the Roomba is fully stable.")]
     [SerializeField] private BehaviorController behaviorController;
@@ -179,6 +187,25 @@ public class JourneyCalculator : MonoBehaviour
             ? movementConfig.ComputeClosingSpeed(SessionManager.Instance.CurrentPad.arousal)
             : movementConfig.MinClosingSpeed;
 
+        if (pauseController != null && pauseController.IsPaused)
+        {
+            // Paused blocks all AUTONOMOUS movement - Journey evaluation
+            // (including its own stuck-timers and resolution checks, which
+            // stay frozen here rather than silently ticking in the
+            // background), Clean/Map, and Behavior pattern motion. It never
+            // blocks the player's own manual control - the player should
+            // always be able to drive the Roomba directly, paused or not,
+            // with no need to unpause first. This is the ONLY thing
+            // FixedUpdate does while paused; everything below is skipped
+            // entirely for this tick.
+            Vector3 pausedKeyboardInput = ReadKeyboardDirection();
+            if (pausedKeyboardInput.sqrMagnitude > 0f)
+            {
+                playerController.Move(pausedKeyboardInput, closingSpeed);
+            }
+            return;
+        }
+
         Vector3 blendedDirection = ComputeBlendedJourneyDirection();
 
         if (StableExpressionJourney != null)
@@ -191,6 +218,8 @@ public class JourneyCalculator : MonoBehaviour
             // so resuming afterward doesn't snap.
             Vector3 keyboardOverride = ReadKeyboardDirection();
             bool playerIsDriving = keyboardOverride.sqrMagnitude > 0f;
+
+            journeySettleDetector?.CheckSettled(true);
 
             if (playerIsDriving)
             {
@@ -211,6 +240,8 @@ public class JourneyCalculator : MonoBehaviour
 
             return;
         }
+
+        journeySettleDetector?.CheckSettled(false);
 
         if (blendedDirection != Vector3.zero)
         {

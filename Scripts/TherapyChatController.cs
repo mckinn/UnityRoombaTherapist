@@ -15,16 +15,34 @@ public class TherapyChatController : MonoBehaviour
     [SerializeField] private GameObject messageRowLeftPrefab;
     [SerializeField] private GameObject messageRowRightPrefab;
 
+    [Tooltip("Resets on typing, message send, and response received - see ResumeTimer's own header comment for why this is the sole intended caller of ResetTimer().")]
+    [SerializeField] private ResumeTimer resumeTimer;
+
+    [Tooltip("Entry trigger 3 of the Managed Pause design (see Planning.md) - a dialog exchange in progress is its own reason to pause, independent of settle-detection, arena-entry, or should_pause. Typing calls Pause() directly here.")]
+    [SerializeField] private PauseController pauseController;
+
     private const string baseUrl = "http://localhost:8000";
 
     void Start()
     {
         inputField.onSubmit.AddListener(OnInputSubmitted);
+        inputField.onValueChanged.AddListener(OnTyping);
     }
 
     void OnDestroy()
     {
         inputField.onSubmit.RemoveListener(OnInputSubmitted);
+        inputField.onValueChanged.RemoveListener(OnTyping);
+    }
+
+    private void OnTyping(string text)
+    {
+        // Entry trigger 3: dialog in progress is its own reason to be
+        // paused, not just something that extends a pause already caused
+        // by something else. Pause() is idempotent - safe to call on every
+        // keystroke rather than needing to detect "typing just started".
+        pauseController?.Pause();
+        resumeTimer?.ResetTimer();
     }
 
     private async void OnInputSubmitted(string text)
@@ -32,6 +50,7 @@ public class TherapyChatController : MonoBehaviour
         SpawnRow(messageRowRightPrefab, text);
         Debug.Log($"[Chat R] {text}");
         inputField.text = "";
+        resumeTimer?.ResetTimer();
 
         await SendTherapyMessage(text);
     }
@@ -62,8 +81,9 @@ public class TherapyChatController : MonoBehaviour
             }
 
             OrchestratorResponse response = JsonConvert.DeserializeObject<OrchestratorResponse>(request.downloadHandler.text);
+            resumeTimer?.ResetTimer();
 
-            SessionManager.Instance.UpdateState(response.pad, response.entity_sensitivities);
+            SessionManager.Instance.UpdateState(response.pad, response.entity_sensitivities, response.should_pause);
 
             // SpawnRow(messageRowLeftPrefab, response.dialog);
             DisplayLeftMessage(response.dialog);

@@ -61,9 +61,10 @@ public class DirtController : MonoBehaviour
             return;
         }
 
-        // TODO (step 4): report this removal into the batched dirt-cleanup
-        // reporting system once it exists, rather than just disappearing
-        // silently. See Planning.md, "Dirt Cleanup and Reporting".
+        // Step 4: report into the batched dirt-cleanup reporting system
+        // before removal. See Planning.md, "Dirt Cleanup and Reporting", and
+        // DirtProgressReporter for the batching/halving-threshold logic.
+        DirtProgressReporter.Instance?.ReportCollected();
         Destroy(gameObject);
     }
 }
