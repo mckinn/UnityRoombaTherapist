@@ -190,9 +190,9 @@ public class DirtProgressReporter : MonoBehaviour
 
         chatController.DisplayLeftMessage(response.dialog);
 
-        if (beforeSensitivities != null)
-        {
-            chatController.DisplaySensitivityChanges(beforeSensitivities, response.entity_sensitivities);
-        }
+        // if (beforeSensitivities != null)
+        // {
+        //     chatController.DisplaySensitivityChanges(beforeSensitivities, response.entity_sensitivities);
+        // }
     }
 }

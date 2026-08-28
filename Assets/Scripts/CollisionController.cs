@@ -70,7 +70,7 @@ public class CollisionController : MonoBehaviour
         }
 
         chatController.DisplayLeftMessage(response.dialog);
-        chatController.DisplaySensitivityChanges(beforeSensitivities, response.entity_sensitivities);
+        // chatController.DisplaySensitivityChanges(beforeSensitivities, response.entity_sensitivities);
     }
 
     private EmotionState BuildEmotionState(string entityId, string entityType)
