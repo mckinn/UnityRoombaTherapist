@@ -6,6 +6,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
+using static System.Net.Mime.MediaTypeNames;
 
 public class TherapyChatController : MonoBehaviour
 {
@@ -87,7 +88,7 @@ public class TherapyChatController : MonoBehaviour
 
             // SpawnRow(messageRowLeftPrefab, response.dialog);
             DisplayLeftMessage(response.dialog);
-            DisplaySensitivityChanges(beforeSensitivities, response.entity_sensitivities);
+            // DisplaySensitivityChanges(beforeSensitivities, response.entity_sensitivities);
 
         }
     }
@@ -163,6 +164,7 @@ public class TherapyChatController : MonoBehaviour
             if (changed)
             {
                 string message = $"[{current.entity_type} -> {current.emotion} ({current.strength:F2})]";
+                Debug.Log($"DisplaySensitivityChanges {message}");
                 Color color = emotionColors.TryGetValue(current.emotion, out Color c) ? c : Color.white;
                 DisplayLeftMessage(message, color);
             }
