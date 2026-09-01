@@ -17,8 +17,8 @@ MonoBehaviour:
     L: 3
     H: 5
   - emotion: joy
-    L: 5
-    H: 2
+    L: 3
+    H: 1
   - emotion: disgust
     L: 3
     H: 3
