@@ -137,11 +137,13 @@ public class PadRadarGraphic : Graphic
         vh.AddVert(v);
     }
 
+    #if UNITY_EDITOR
     protected override void OnValidate()
     {
         base.OnValidate();
         RepositionLabels();
     }
+    #endif
 
     private void RepositionLabels()
     {
