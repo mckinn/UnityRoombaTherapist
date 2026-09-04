@@ -92,13 +92,18 @@ public class TherapyChatController : MonoBehaviour
 
         }
     }
-
+    /// <summary>
+    ///  one of two methods used to post messaging information in the message log.   This is due for some consolidation.
+    /// </summary>
+    /// <param name="rowPrefab"></param>
+    /// <param name="message"></param>
     private void SpawnRow(GameObject rowPrefab, string message)
     {
         GameObject rowInstance = Instantiate(rowPrefab, contentTransform);
 
         TextMeshProUGUI bubbleText = rowInstance.GetComponentInChildren<TextMeshProUGUI>();
         bubbleText.text = message;
+        bubbleText.fontSize = 20;
 
         RectTransform bubbleRect = bubbleText.transform.parent.GetComponent<RectTransform>();
         RectTransform rowRect = rowInstance.GetComponent<RectTransform>();
@@ -115,6 +120,7 @@ public class TherapyChatController : MonoBehaviour
         GameObject rowInstance = Instantiate(messageRowLeftPrefab, contentTransform);
         TextMeshProUGUI bubbleText = rowInstance.GetComponentInChildren<TextMeshProUGUI>();
         bubbleText.text = message;
+        bubbleText.fontSize = 20;
         Debug.Log($"[Chat L] {message}");
 
         if (textColor.HasValue)
