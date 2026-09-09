@@ -49,7 +49,7 @@ public class DirtProgressReporter : MonoBehaviour
     [SerializeField] private TherapyChatController chatController;
 
     [Tooltip("Minimum number of newly-collected pieces required before a threshold report can fire, even if the halving math would suggest fewer.")]
-    [SerializeField] private int minimumReportGap = 3;
+    [SerializeField] private int minimumReportGap = 1;
 
     private int presumedTotal;
     private int collectedCount;
@@ -128,6 +128,7 @@ public class DirtProgressReporter : MonoBehaviour
 
         collectedCount++;
         collectedSinceLastReport++;
+        Debug.Log($"Dirt progress: collected: {collectedCount} since last count {collectedSinceLastReport}, threshold {nextReportThreshold}");
 
         if (collectedSinceLastReport >= nextReportThreshold)
         {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class CollisionController : MonoBehaviour
 {
@@ -69,7 +70,7 @@ public class CollisionController : MonoBehaviour
             return;
         }
 
-        chatController.DisplayLeftMessage(response.dialog);
+        if (response.dialog.Length > 0) chatController.DisplayLeftMessage(response.dialog);
         // chatController.DisplaySensitivityChanges(beforeSensitivities, response.entity_sensitivities);
     }
 

@@ -365,7 +365,7 @@ Animator:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 297161221}
-  m_Enabled: 1
+  m_Enabled: 0
   m_Avatar: {fileID: 0}
   m_Controller: {fileID: 9100000, guid: b3f6a9bea0e48448f85bde8861af6976, type: 2}
   m_CullingMode: 0
@@ -1648,7 +1648,7 @@ Animator:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1440623002}
-  m_Enabled: 1
+  m_Enabled: 0
   m_Avatar: {fileID: 0}
   m_Controller: {fileID: 9100000, guid: b3f6a9bea0e48448f85bde8861af6976, type: 2}
   m_CullingMode: 0
@@ -1669,7 +1669,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1440623002}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 08c287fdfb8b0d146b4433e7b3c9f1e2, type: 3}
   m_Name: 
@@ -2136,7 +2136,7 @@ MonoBehaviour:
   dirtScatterer: {fileID: 1779458347}
   cleanMapController: {fileID: 2038139652}
   chatController: {fileID: 1427322943}
-  minimumReportGap: 3
+  minimumReportGap: 1
 --- !u!1 &1783572213
 GameObject:
   m_ObjectHideFlags: 0
@@ -2716,7 +2716,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CollisionController
   chatController: {fileID: 1427322943}
-  minSecondsBetweenArenaEvents: 2
+  minSecondsBetweenArenaEvents: 0.05
 --- !u!114 &2038139647
 MonoBehaviour:
   m_ObjectHideFlags: 0
