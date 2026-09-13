@@ -47,6 +47,24 @@ public class OrchestratorResponse
     public PADState pad;
     public List<EntitySensitivity> entity_sensitivities;
     public bool should_pause;
+    public MovementDirective movement_directive;
+}
+
+/// <summary>
+/// A resolved LLM movement instruction - see Movement_Concurrency_Plan.md
+/// section 4, items 1 and 3. target_entity_id is already a resolved
+/// entity_id, not a name - resolution (roster name -> entity_id) happens
+/// entirely in the Orchestrator, by design (item 3: Unity never sees
+/// names). Newtonsoft leaves this null when the JSON key is absent
+/// (movement_directive is optional - most turns won't include one), which
+/// is exactly the "nothing to do" signal callers should check for.
+/// </summary>
+[System.Serializable]
+public class MovementDirective
+{
+    public string target_entity_id;
+    public string direction; // "closer" or "further"
+    public float percent;    // 0-100, clamped server-side (llm.py)
 }
 
 [System.Serializable]

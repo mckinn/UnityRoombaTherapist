@@ -42,13 +42,6 @@ public class JourneyCalculator : MonoBehaviour
     [Tooltip("Entry trigger 1: detects a Journey settling (all active Journeys just resolved) and calls Pause() - see JourneySettleDetector's own header comment for why this is called inline rather than independently ticked.")]
     [SerializeField] private JourneySettleDetector journeySettleDetector;
 
-    [Header("Behavior (Step 6)")]
-    [Tooltip("The Behavior pattern renderer this script hands control to once the Roomba is fully stable.")]
-    [SerializeField] private BehaviorController behaviorController;
-
-    [Tooltip("Master on/off switch for Behavior pattern motion. Disabled by default while the color-based expression prototype (EmotionColorIndicator) is being evaluated instead - the procedural motion patterns were found confusing rather than clarifying in play-testing. This is the single point that decides whether BehaviorController.ApplyPattern ever actually gets called; unlike unchecking the BehaviorController component's own enabled checkbox, this reliably stops it, since ApplyPattern is called directly rather than through a Unity magic method. All Behavior code/config is preserved and can be re-enabled here at any time.")]
-    [SerializeField] private bool behaviorMotionEnabled = false;
-
     /// <summary>
     /// The resolved journey to currently express, or null if anything is
     /// still unresolved (mid-pursuit) or nothing has ever resolved yet.
@@ -71,8 +64,13 @@ public class JourneyCalculator : MonoBehaviour
     [Tooltip("Testing aid: when true, keyboard input is added on top of the blended Journey movement instead of being ignored. Lets you mock the effect of an additional simultaneous movement source before Step 7 actually produces one. Leave false for normal play - this deliberately reintroduces the authority conflict the single-caller design otherwise prevents.")]
     [SerializeField] private bool allowManualNudgeDuringJourney = false;
 
+    [Tooltip("Minimum seconds between blend-diagnostic log lines (see ComputeBlendedJourneyDirection) - throttled since it would otherwise log every FixedUpdate tick while 2+ journeys are simultaneously active.")]
+    [SerializeField] private float blendDiagnosticLogIntervalSeconds = 0.5f;
+
+    private float lastBlendDiagnosticLogTime = float.NegativeInfinity;
+
     [Header("Clean/Map (Step 3)")]
-    [Tooltip("Drives autonomous coverage movement when nothing else (Journey, keyboard, Behavior pattern motion) wants to move the Roomba this frame. Lowest priority in the dispatch - see DriveCleanMap and CleanMapController's own header comment.")]
+    [Tooltip("Drives autonomous coverage movement when nothing else (Journey, keyboard) wants to move the Roomba this frame. Lowest priority in the dispatch - see DriveCleanMap and CleanMapController's own header comment.")]
     [SerializeField] private CleanMapController cleanMapController;
 
     [Header("Journey Stuck Recovery")]
@@ -88,6 +86,12 @@ public class JourneyCalculator : MonoBehaviour
     private readonly JourneyStuckRecovery stuckRecovery = new JourneyStuckRecovery();
 
     private readonly Dictionary<string, ActiveJourney> activeJourneys = new Dictionary<string, ActiveJourney>();
+
+    // entity_id -> Time.time of the last movement_directive processed for
+    // it - see the duplicate-dispatch check in HandleLLMDirective, added
+    // 2026-09-14 after playtests showed apparently-duplicate log lines
+    // that were too fast to confirm visually against the game view.
+    private readonly Dictionary<string, float> lastDirectiveProcessedTime = new Dictionary<string, float>();
 
     public IReadOnlyDictionary<string, ActiveJourney> ActiveJourneys => activeJourneys;
 
@@ -111,6 +115,32 @@ public class JourneyCalculator : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Fired synchronously on every physical collision with a tracked
+    /// entity - see CollisionController.OnEntityCollision. Refreshes
+    /// (or creates) the ActiveJourney for this entity_id: emotion,
+    /// strength, DestinationDistance and LastKnownPosition always reflect
+    /// the most recent physical contact, and Resolved is cleared since a
+    /// fresh collision means the entity is back in play.
+    ///
+    /// Deliberately does NOT reset RedirectTarget/RecoveryState/
+    /// StuckTrackingBaseline/StuckTimer on a re-trigger - fixed 2026-09-12,
+    /// the same bug and the same fix as HandleLLMDirective's (see that
+    /// method's doc comment for the full rationale). A physically wedged
+    /// Roomba against a multi-collider entity (e.g. several colliders
+    /// making up one table) can fire OnCollisionEnter far more often than
+    /// the 1.5s stuck-time threshold - every fresh re-trigger was wiping
+    /// the stuck clock and any in-progress recovery episode before either
+    /// could ever run uninterrupted, so a Roomba bouncing rapidly between
+    /// two contact points never registered as "stuck" even though it was
+    /// making zero net progress. As with HandleLLMDirective, a repeated
+    /// collision with an entity already being pursued is not new
+    /// navigational information the way a *fresh* encounter is - only the
+    /// fields that genuinely change (Emotion/Strength/DestinationDistance/
+    /// LastKnownPosition/Resolved) are refreshed; stuck-recovery
+    /// bookkeeping runs uninterrupted across repeated collisions, exactly
+    /// as it does across repeated FixedUpdate ticks with none at all.
+    /// </summary>
     private void HandleEntityCollision(EntityIdentity identity, string entityType, Vector3 contactPoint)
     {
         EntitySensitivity sensitivity = SessionManager.Instance.GetSensitivity(entityType);
@@ -141,17 +171,16 @@ public class JourneyCalculator : MonoBehaviour
 
         if (activeJourneys.TryGetValue(entityId, out ActiveJourney journey))
         {
-            // Re-trigger: refresh everything, including un-resolving it if
-            // a fresh collision means it's back in play.
+            // Re-trigger: refresh what a fresh collision actually tells us
+            // (emotion/strength/distance/contact point), including
+            // un-resolving it if a fresh collision means it's back in
+            // play. Stuck-recovery bookkeeping is deliberately left alone
+            // - see this method's doc comment above.
             journey.Emotion = sensitivity.emotion;
             journey.Strength = sensitivity.strength;
             journey.DestinationDistance = destinationDistance;
             journey.LastKnownPosition = contactPoint;
             journey.Resolved = false;
-            journey.RedirectTarget = null;
-            journey.RecoveryState = null;
-            journey.StuckTrackingBaseline = transform.position;
-            journey.StuckTimer = 0f;
         }
         else
         {
@@ -172,8 +201,194 @@ public class JourneyCalculator : MonoBehaviour
             activeJourneys[entityId] = journey;
         }
 
+        // contactPoint is logged here (2026-09-12, diagnostic addition) so a
+        // multi-collider entity's LastKnownPosition jumping between
+        // distinct physical contact points - suspected cause of
+        // unproductive oscillation when trapped among several colliders on
+        // one entity - is directly visible in the log, rather than only
+        // inferable from downstream symptoms.
         Debug.Log($"JourneyCalculator: entity_id={entityId}, entity_type={entityType}, emotion={journey.Emotion}, " +
-                  $"V={journey.Strength:F2} => D={journey.DestinationDistance:F2}, epsilon={movementConfig.ComputeEpsilon():F3}");
+                  $"V={journey.Strength:F2} => D={journey.DestinationDistance:F2}, epsilon={movementConfig.ComputeEpsilon():F3}, " +
+                  $"contactPoint={contactPoint}");
+    }
+
+    /// <summary>
+    /// Applies an LLM-issued movement_directive - see
+    /// Movement_Concurrency_Plan.md section 4, items 1 (D-computation) and
+    /// 3 (entity resolution: this only ever receives an already-resolved
+    /// entity_id, never a name). Called from SessionManager.UpdateState
+    /// whenever an Orchestrator response carries a non-null
+    /// movement_directive.
+    ///
+    /// D is computed ONCE here, as a snapshot at directive-processing time
+    /// - not re-derived every frame - using the exact same distance metric
+    /// EvaluateJourney uses: planar (y=0) distance from the Roomba's
+    /// current position to the journey's LastKnownPosition. D = d_current
+    /// * (1 - percent/100) for "closer", D = d_current * (1 + percent/100)
+    /// for "further". percent is already clamped to [0, 100] server-side
+    /// (llm.py) but is clamped again here defensively, since an
+    /// out-of-range value feeding this formula directly could otherwise
+    /// produce a negative destination distance - a physically meaningless
+    /// target, not just a cosmetic issue.
+    ///
+    /// No-ops (with a warning, not an error) if target_entity_id has no
+    /// corresponding ActiveJourney yet. This is the same "not a bug"
+    /// defensive stance as HandleEntityCollision's own null-sensitivity
+    /// early return above: the roster (server-side, in the Orchestrator)
+    /// and activeJourneys (here) are populated by two independently-timed
+    /// triggers on the same physical collision - the roster updates
+    /// unconditionally, server-side, within the very request that reports
+    /// the collision, while an activeJourneys entry is only created once a
+    /// sensitivity is already known *locally*, at the moment of physical
+    /// contact (see CollisionController: the local OnEntityCollision fires
+    /// before the network round trip that would have taught this client
+    /// about a brand-new entity_type). So an entity can be on the roster
+    /// (touched once, sensitivity unknown at the time) without ever having
+    /// a local journey - not just in the same frame it was first touched,
+    /// but for as long as it isn't touched again after its sensitivity
+    /// becomes known. Dropping the directive is the correct, safe response
+    /// to that gap, not a workaround for a bug.
+    ///
+    /// Deliberately does NOT reset RedirectTarget/RecoveryState/
+    /// StuckTrackingBaseline/StuckTimer the way HandleEntityCollision does
+    /// on a fresh physical collision - found and fixed 2026-09-11 after
+    /// play-testing a trapped Roomba: repeated movement_directives for the
+    /// same entity (which the arena-event rate limit means can arrive
+    /// roughly every 2 seconds) were wiping the stuck-recovery clock and
+    /// any in-progress angular-stepping episode just before or right
+    /// around the point journeyStuckTimeThreshold (1.5s) would otherwise
+    /// have crossed it - so JourneyStuckRecovery's redirect (and
+    /// eventually the universal stuck-abandonment) never got an
+    /// uninterrupted run, and the Roomba kept re-computing the exact same
+    /// blocked radial "away from contact point" direction forever. Unlike
+    /// a fresh collision - which really is new information ("I found this
+    /// again") - a repeated directive for an entity the Roomba is already
+    /// pursuing is often the OPPOSITE of new information: it's the LLM
+    /// noticing the Roomba still hasn't gotten anywhere. Only
+    /// DestinationDistance (what the directive actually changes) and
+    /// Resolved (since the new D may or may not already be satisfied) are
+    /// touched here; stuck-recovery bookkeeping is left to run
+    /// uninterrupted across repeated directives, exactly as it does across
+    /// repeated FixedUpdate ticks with no directive at all.
+    /// </summary>
+    public void HandleLLMDirective(MovementDirective directive)
+    {
+        if (directive == null)
+        {
+            return;
+        }
+
+        if (!activeJourneys.TryGetValue(directive.target_entity_id, out ActiveJourney journey))
+        {
+            Debug.LogWarning($"JourneyCalculator: movement_directive targets entity_id={directive.target_entity_id}, " +
+                              $"which has no active journey yet - dropping directive.");
+            return;
+        }
+
+        // Duplicate-dispatch check (added 2026-09-14): a genuinely
+        // duplicate call for the SAME entity_id inside the exact same
+        // physics tick would compute an identical d_current (transform.
+        // position hasn't moved between them), which is what playtesting
+        // surfaced as suspicious back-to-back log lines too fast to watch
+        // for visually. Scoped to (entity_id, Time.time) rather than a
+        // bare Time.time comparison - two DIFFERENT entities' directives
+        // legitimately landing in the same tick is not a bug and
+        // shouldn't be flagged as one. LogError, not throw - see this
+        // method's own reasoning for why a real exception here is riskier
+        // than the bug it would be catching.
+        if (lastDirectiveProcessedTime.TryGetValue(directive.target_entity_id, out float lastProcessedTime)
+            && lastProcessedTime == Time.time)
+        {
+            Debug.LogError($"JourneyCalculator: movement_directive for entity_id={directive.target_entity_id} " +
+                            $"was processed twice in the same physics tick (Time.time={Time.time:F3}) - " +
+                            $"likely duplicate dispatch, not a coincidence.");
+        }
+        lastDirectiveProcessedTime[directive.target_entity_id] = Time.time;
+
+        Vector3 roombaPos = transform.position;
+        roombaPos.y = 0f;
+        Vector3 entityPos = journey.LastKnownPosition;
+        entityPos.y = 0f;
+
+        float dCurrent = Vector3.Distance(roombaPos, entityPos);
+        float fraction = Mathf.Clamp(directive.percent, 0f, 100f) / 100f;
+        float newDestinationDistance = directive.direction == "closer"
+            ? dCurrent * (1f - fraction)
+            : dCurrent * (1f + fraction);
+
+        journey.DestinationDistance = newDestinationDistance;
+        journey.Resolved = false;
+
+        // entityPos is logged here (2026-09-12, diagnostic addition) so it
+        // can be directly compared against the contactPoint values in
+        // HandleEntityCollision's log for the same entity_id - if
+        // entityPos is jumping between calls, this directive's "further"
+        // is being measured from a different anchor than the previous one
+        // was, which is the suspected cause of oscillation when trapped
+        // among a multi-collider entity's several contact points.
+        Debug.Log($"JourneyCalculator: movement_directive entity_id={directive.target_entity_id}, " +
+                  $"direction={directive.direction}, percent={directive.percent:F0} => " +
+                  $"d_current={dCurrent:F2}, new D={newDestinationDistance:F2}, entityPos={entityPos}");
+    }
+
+    /// <summary>
+    /// Directly creates a permanent ActiveJourney for a designated
+    /// "landmark" entity - added 2026-09-14 after several trapped-Roomba
+    /// playtests (see Movement_Concurrency_Plan.md's directionality
+    /// discussion) showed movement_directive only working as an escape
+    /// mechanism when the roster happened to already contain some OTHER
+    /// entity for the LLM to reference; a single-entity trap with an
+    /// otherwise-empty roster left it with no alternative at all. Called
+    /// once, from SessionManager right after session start (see
+    /// SessionManager.landmarkIdentity) - NOT through the normal
+    /// HandleEntityCollision path, which deliberately bails out early for
+    /// an entity with no known or "none" sensitivity (correctly so, for a
+    /// REAL first contact - see that method's own comments). This
+    /// journey's purpose isn't emotional pursuit, it's guaranteed
+    /// availability, so it's created directly here instead.
+    ///
+    /// Starts Resolved = true (zero blend weight, no pull on its own) -
+    /// it's inert until a movement_directive actually targets it, at
+    /// which point HandleLLMDirective un-resolves it exactly like any
+    /// other journey. Idempotent: a second call for an entity_id already
+    /// tracked (e.g. if this entity later collides for real) is a no-op,
+    /// so calling this more than once, or the entity later being touched
+    /// through the ordinary collision path, is safe either way.
+    /// </summary>
+    public void SeedLandmarkJourney(EntityIdentity identity, string entityType, Vector3 position)
+    {
+        if (identity == null)
+        {
+            Debug.LogWarning("JourneyCalculator: SeedLandmarkJourney called with a null identity - ignoring.");
+            return;
+        }
+
+        string entityId = identity.GetOrAssignId();
+
+        if (activeJourneys.ContainsKey(entityId))
+        {
+            return;
+        }
+
+        float destinationDistance = movementConfig.ComputeDestinationDistance("ambivalence", 0f);
+
+        activeJourneys[entityId] = new ActiveJourney
+        {
+            Entity = identity,
+            EntityType = entityType,
+            Emotion = "ambivalence",
+            Strength = 0f,
+            DestinationDistance = destinationDistance,
+            LastKnownPosition = position,
+            Resolved = true,
+            RedirectTarget = null,
+            RecoveryState = null,
+            StuckTrackingBaseline = transform.position,
+            StuckTimer = 0f
+        };
+
+        Debug.Log($"JourneyCalculator: seeded landmark journey entity_id={entityId}, entity_type={entityType}, " +
+                  $"position={position}, D={destinationDistance:F2} (inert until a movement_directive targets it).");
     }
 
     private void FixedUpdate()
@@ -212,10 +427,11 @@ public class JourneyCalculator : MonoBehaviour
         {
             // Fully stable - nothing currently unresolved. Keyboard
             // immediately interrupts idle expression (lower priority than
-            // the player actually wanting to drive). BehaviorController is
-            // ticked every frame regardless of which - it needs to know
-            // playerIsDriving to keep its anchor synced while overridden,
-            // so resuming afterward doesn't snap.
+            // the player actually wanting to drive). Behavior pattern
+            // motion (BehaviorController) was retired 2026-09-11 - see
+            // Movement_Concurrency_Plan.md section 4 item 4 - so Clean/Map
+            // is now the only thing that can claim a stable-expression
+            // frame the player isn't driving.
             Vector3 keyboardOverride = ReadKeyboardDirection();
             bool playerIsDriving = keyboardOverride.sqrMagnitude > 0f;
 
@@ -225,16 +441,8 @@ public class JourneyCalculator : MonoBehaviour
             {
                 playerController.Move(keyboardOverride, closingSpeed);
             }
-
-            if (behaviorMotionEnabled)
+            else
             {
-                behaviorController.ApplyPattern(StableExpressionJourney, playerIsDriving);
-            }
-            else if (!playerIsDriving)
-            {
-                // Nothing else wants this frame: no Behavior pattern motion
-                // active, and the player isn't overriding. Clean/Map takes
-                // the fallback that used to just do nothing here.
                 DriveCleanMap(closingSpeed);
             }
 
@@ -315,6 +523,21 @@ public class JourneyCalculator : MonoBehaviour
         float totalWeight = 0f;
         ActiveJourney mostRecentlyResolved = null;
 
+        // Diagnostic snapshot (2026-09-13, throttled - see
+        // blendDiagnosticLogIntervalSeconds). Added after a playtest where
+        // a Roomba trapped under one entity broke free only once OTHER,
+        // unrelated journeys (a chair, a different table) had large
+        // outstanding movement_directive-driven errors - the existing
+        // per-event logs (collision, movement_directive) show each
+        // journey's own state in isolation, but not which journey actually
+        // dominated the resulting blended direction when several compete.
+        // Only worth logging (and allocating) when 2+ journeys are
+        // simultaneously in the blend - a single active journey's
+        // direction/weight is already fully visible from its own
+        // collision/directive log line.
+        bool shouldLogBlend = Time.time - lastBlendDiagnosticLogTime >= blendDiagnosticLogIntervalSeconds;
+        List<string> blendDiagnostics = shouldLogBlend ? new List<string>() : null;
+
         foreach (KeyValuePair<string, ActiveJourney> kvp in activeJourneys)
         {
             ActiveJourney journey = kvp.Value;
@@ -341,6 +564,14 @@ public class JourneyCalculator : MonoBehaviour
 
             weightedSum += direction * weight;
             totalWeight += weight;
+
+            blendDiagnostics?.Add($"{kvp.Key}: D={journey.DestinationDistance:F2}, weight={weight:F2}, direction={direction}");
+        }
+
+        if (shouldLogBlend && blendDiagnostics.Count > 1)
+        {
+            lastBlendDiagnosticLogTime = Time.time;
+            Debug.Log($"JourneyCalculator: blend of {blendDiagnostics.Count} active journeys - {string.Join(" | ", blendDiagnostics)}");
         }
 
         // Only express once EVERYTHING tracked is resolved - see
@@ -405,6 +636,17 @@ public class JourneyCalculator : MonoBehaviour
 
         CheckJourneyStuckAndMaybeRedirect(journey, roombaPos, entityPos, radialDirection);
 
+        if (journey.Resolved)
+        {
+            // CheckJourneyStuckAndMaybeRedirect can now abandon the journey
+            // (Resolved = true) mid-call - see JourneyStuckRecovery's
+            // stuck-recovery cap and Movement_Concurrency_Plan.md section 4
+            // item 5. Mirrors the epsilon-deadband early return above: an
+            // abandoned journey must not fall through and compute a
+            // direction/weight for this same frame.
+            return (Vector3.zero, 0f);
+        }
+
         Vector3 direction;
         if (journey.RedirectTarget.HasValue)
         {
@@ -435,6 +677,14 @@ public class JourneyCalculator : MonoBehaviour
     /// or whenever a new recovery target is chosen - each attempt (radial
     /// or redirected) gets its own fresh progress window to prove itself
     /// in, rather than being judged against a stale baseline from before.
+    ///
+    /// If stuckRecovery reports a full circle of redirect angles already
+    /// tried without resolving (see JourneyStuckRecovery's cap), the
+    /// journey is abandoned instead: marked Resolved exactly like a normal
+    /// in-epsilon resolution, so it drops out of the blend cleanly rather
+    /// than the Roomba locking against a wall forever - universal
+    /// stuck-abandonment, Movement_Concurrency_Plan.md section 4 item 5. A
+    /// fresh collision with this same entity re-opens it as usual.
     /// </summary>
     private void CheckJourneyStuckAndMaybeRedirect(ActiveJourney journey, Vector3 roombaPos, Vector3 entityPos, Vector3 currentDirection)
     {
@@ -450,14 +700,35 @@ public class JourneyCalculator : MonoBehaviour
 
         if (journey.StuckTimer >= journeyStuckTimeThreshold)
         {
-            journey.RedirectTarget = stuckRecovery.GetNextRecoveryTarget(
+            Vector3? nextTarget = stuckRecovery.GetNextRecoveryTarget(
                 journey, currentDirection, entityPos, journey.DestinationDistance, journeyRecoveryStepDegrees);
 
             journey.StuckTrackingBaseline = roombaPos;
             journey.StuckTimer = 0f;
 
+            if (!nextTarget.HasValue)
+            {
+                journey.Resolved = true;
+                journey.ResolvedSequence = ++resolutionSequenceCounter;
+                journey.RedirectTarget = null;
+                journey.RecoveryState = null;
+
+                Debug.LogWarning($"JourneyCalculator: journey for entity_id={journey.Entity?.GetOrAssignId()} " +
+                                  $"exhausted stuck-recovery (tried a full circle of redirect angles) - abandoning as unresolvable. " +
+                                  $"entityPos={entityPos}");
+                return;
+            }
+
+            journey.RedirectTarget = nextTarget;
+
+            // entityPos is logged here (2026-09-12, diagnostic addition),
+            // same rationale as the movement_directive and
+            // HandleEntityCollision logs - lets a stuck-recovery step be
+            // correlated against exactly which anchor point it was
+            // computed from.
             Debug.LogWarning($"JourneyCalculator: journey for entity_id={journey.Entity?.GetOrAssignId()} " +
-                              $"stuck for {journeyStuckTimeThreshold:F1}s - stepping recovery angle, new target {journey.RedirectTarget.Value}.");
+                              $"stuck for {journeyStuckTimeThreshold:F1}s - stepping recovery angle, new target {journey.RedirectTarget.Value}. " +
+                              $"entityPos={entityPos}");
         }
     }
 

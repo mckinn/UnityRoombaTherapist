@@ -84,7 +84,7 @@ public class TherapyChatController : MonoBehaviour
             OrchestratorResponse response = JsonConvert.DeserializeObject<OrchestratorResponse>(request.downloadHandler.text);
             resumeTimer?.ResetTimer();
 
-            SessionManager.Instance.UpdateState(response.pad, response.entity_sensitivities, response.should_pause);
+            SessionManager.Instance.UpdateState(response.pad, response.entity_sensitivities, response.should_pause, response.movement_directive);
 
             // SpawnRow(messageRowLeftPrefab, response.dialog);
             DisplayLeftMessage(response.dialog);
@@ -99,6 +99,8 @@ public class TherapyChatController : MonoBehaviour
     /// <param name="message"></param>
     private void SpawnRow(GameObject rowPrefab, string message)
     {
+        // [TODO] - consolidate SpawnRow and DisplayLeftMessage
+        //
         GameObject rowInstance = Instantiate(rowPrefab, contentTransform);
 
         TextMeshProUGUI bubbleText = rowInstance.GetComponentInChildren<TextMeshProUGUI>();

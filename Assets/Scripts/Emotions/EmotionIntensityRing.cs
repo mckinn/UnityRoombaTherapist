@@ -19,9 +19,11 @@ using UnityEngine;
 /// doesn't feel right once you're watching it.
 ///
 /// Polls SessionManager.Instance every Update() rather than subscribing to
-/// an event - same defensive reasoning as BehaviorExpressionCalculator:
-/// avoids depending on cross-object Awake/OnEnable ordering for what's a
-/// non-performance-critical visual, not a physics-tied one.
+/// an event - same defensive reasoning the since-removed
+/// BehaviorExpressionCalculator debug aid used (removed 2026-09-11 along
+/// with BehaviorController - see Movement_Concurrency_Plan.md section 4
+/// item 4): avoids depending on cross-object Awake/OnEnable ordering for
+/// what's a non-performance-critical visual, not a physics-tied one.
 /// </summary>
 public class EmotionIntensityRing : MonoBehaviour
 {

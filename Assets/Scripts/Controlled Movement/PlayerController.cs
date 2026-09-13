@@ -82,14 +82,18 @@ public class PlayerController : MonoBehaviour
     /// <summary>
     /// Moves directly to an absolute world position (X/Z only - the Y
     /// component is ignored, current height is preserved; use Jump() for
-    /// vertical motion). Unlike Move(), does not change facing - callers
-    /// driving a positional pattern (e.g. BehaviorController) are
-    /// responsible for orientation if they want any.
+    /// vertical motion). Unlike Move(), does not change facing - a caller
+    /// driving a positional pattern is responsible for orientation if it
+    /// wants any.
     ///
     /// Separate primitive from Move() on purpose: Move() is "go this
     /// direction at this speed" (Journey/keyboard); MoveTo() is "be at this
-    /// exact place right now" (Behavior patterns). Different callers, same
-    /// motor, same single point of Rigidbody ownership.
+    /// exact place right now". No current caller uses MoveTo() - it was
+    /// written for the since-removed BehaviorController pattern renderer
+    /// (removed 2026-09-11, Movement_Concurrency_Plan.md section 4 item 4)
+    /// - but it's kept as a general-purpose primitive on the single shared
+    /// motor rather than deleted, in case a future feature needs the same
+    /// "be at this exact place right now" shape.
     /// </summary>
     public void MoveTo(Vector3 worldPosition)
     {

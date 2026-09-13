@@ -10,10 +10,11 @@ using UnityEngine;
 /// uses), so there's no shared state and no authority conflict to manage -
 /// color literally cannot be affected by what Journey/keyboard are doing.
 ///
-/// BehaviorController (the procedural-motion expression approach) is
-/// retired/dormant, not deleted or modified - this is a parallel, simpler
-/// replacement aimed at the same underlying goal: making the Roomba's
-/// current feeling legible to the player at a glance.
+/// A prior procedural-motion expression approach (BehaviorController,
+/// removed 2026-09-11 - see Movement_Concurrency_Plan.md section 4 item 4)
+/// aimed at the same underlying goal - this is a parallel, simpler
+/// replacement, unaffected by that removal: making the Roomba's current
+/// feeling legible to the player at a glance.
 ///
 /// ApplyColor() is intentionally a stub right now - the actual mechanism
 /// (MaterialPropertyBlock + the correct shader color property name) is

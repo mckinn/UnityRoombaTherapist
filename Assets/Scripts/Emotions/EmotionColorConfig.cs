@@ -108,12 +108,14 @@ public class EmotionColorConfig : ScriptableObject
 
     /// <summary>
     /// Maps Dominance (-1..1) to the indicator's uniform local scale.
-    /// Deliberately a separate min/max range from BehaviorExpressionConfig
-    /// (which uses the same Dominance axis for a different purpose -
-    /// oscillation-pattern size, not indicator scale) - same underlying
-    /// technique, intentionally not the same tunable numbers, since this
-    /// color-based approach is meant to stand fully independent of the
-    /// (currently dormant) motion-pattern approach.
+    /// Deliberately its own min/max range, historically separate from the
+    /// since-removed BehaviorExpressionConfig (which used the same
+    /// Dominance axis for a different purpose - oscillation-pattern size,
+    /// not indicator scale; removed 2026-09-11 along with BehaviorController
+    /// and BehaviorExpressionCalculator - see Movement_Concurrency_Plan.md
+    /// section 4 item 4) - same underlying technique, intentionally not the
+    /// same tunable numbers, since this color-based approach was always
+    /// meant to stand fully independent of the motion-pattern approach.
     /// </summary>
     public float ComputeIndicatorSize(float dominance)
     {
