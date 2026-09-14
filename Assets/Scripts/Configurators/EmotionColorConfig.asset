@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fb306edd1d1979b459d09a01f5239e0e, type: 3}
+  m_Name: EmotionColorConfig
+  m_EditorClassIdentifier: Assembly-CSharp::EmotionColorConfig
+  colors:
+  - emotion: fear
+    color: {r: 0.7490196, g: 0.10196076, b: 0.18823527, a: 1}
+  - emotion: joy
+    color: {r: 0.52488834, g: 0.054378804, b: 0.8867924, a: 1}
+  - emotion: disgust
+    color: {r: 0.35, g: 0.65, b: 0.2, a: 1}
+  - emotion: curiosity
+    color: {r: 0.15, g: 0.6, b: 1, a: 1}
+  - emotion: ambivalence
+    color: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+  defaultColor: {r: 1, g: 1, b: 1, a: 0.1764706}
+  transitionDuration: 1
+  minSaturation: 0.123
+  maxSaturation: 1
+  highPleasureMeansVivid: 1
+  minSize: 0.1
+  maxSize: 1
+  highDominanceMeansLarge: 1

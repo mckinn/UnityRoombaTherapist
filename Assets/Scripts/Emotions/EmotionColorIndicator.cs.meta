@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: cd5ab40ac84ed31419ec1374ba07e0d2
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - collisionController: {instanceID: 0}
+  - colorConfig: {fileID: 11400000, guid: deecb04e0d257b9429bdf69b74435e35, type: 2}
+  - indicatorRenderer: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

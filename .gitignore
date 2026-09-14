@@ -20,6 +20,322 @@
 /[Uu]ser[Ss]ettings/
 *.log
 
+# --- BEGIN customization: selective Assets tracking (generated) ---
+# Ignore Assets wholesale by default (tutorial art assets are physically
+# present on disk for the Unity Editor, but most are not pushed to git).
+/[Aa]ssets/*
+
+# Scripts: fully tracked (all .cs, Configurators/), except the
+# scaffolding-for-review subfolder below, which stays ignored.
+!/[Aa]ssets/Scripts/
+!/[Aa]ssets/Scripts.meta
+/[Aa]ssets/Scripts/Roombi additions/old/
+/[Aa]ssets/Scripts/Roombi additions/old.meta
+
+# Scenes: only the canonical integration scene is tracked.
+!/[Aa]ssets/Scenes/
+!/[Aa]ssets/Scenes.meta
+/[Aa]ssets/Scenes/*
+!/[Aa]ssets/Scenes/TherapyIntegrationSource.unity
+!/[Aa]ssets/Scenes/TherapyIntegrationSource.unity.meta
+
+# Materials: verified dependency closure only.
+!/[Aa]ssets/Materials/
+!/[Aa]ssets/Materials.meta
+/[Aa]ssets/Materials/*
+!/[Aa]ssets/Materials/EmotionIndicatorMaterial.mat
+!/[Aa]ssets/Materials/EmotionIndicatorMaterial.mat.meta
+!/[Aa]ssets/Materials/Interior/
+!/[Aa]ssets/Materials/Interior.meta
+!/[Aa]ssets/Materials/Outdoor/
+!/[Aa]ssets/Materials/Outdoor.meta
+!/[Aa]ssets/Materials/Skyboxes/
+!/[Aa]ssets/Materials/Skyboxes.meta
+!/[Aa]ssets/Materials/VFX/
+!/[Aa]ssets/Materials/VFX.meta
+/[Aa]ssets/Materials/Interior/*
+!/[Aa]ssets/Materials/Interior/Collectibles/
+!/[Aa]ssets/Materials/Interior/Collectibles.meta
+!/[Aa]ssets/Materials/Interior/Environment/
+!/[Aa]ssets/Materials/Interior/Environment.meta
+!/[Aa]ssets/Materials/Interior/Objects/
+!/[Aa]ssets/Materials/Interior/Objects.meta
+/[Aa]ssets/Materials/Interior/Collectibles/*
+!/[Aa]ssets/Materials/Interior/Collectibles/Material_Gems.mat
+!/[Aa]ssets/Materials/Interior/Collectibles/Material_Gems.mat.meta
+/[Aa]ssets/Materials/Interior/Environment/*
+!/[Aa]ssets/Materials/Interior/Environment/Glass.mat
+!/[Aa]ssets/Materials/Interior/Environment/Glass.mat.meta
+!/[Aa]ssets/Materials/Interior/Environment/PatternSpotGreenBig.mat
+!/[Aa]ssets/Materials/Interior/Environment/PatternSpotGreenBig.mat.meta
+!/[Aa]ssets/Materials/Interior/Environment/PatternSpotGrey.mat
+!/[Aa]ssets/Materials/Interior/Environment/PatternSpotGrey.mat.meta
+!/[Aa]ssets/Materials/Interior/Environment/PatternSpotPurple.mat
+!/[Aa]ssets/Materials/Interior/Environment/PatternSpotPurple.mat.meta
+!/[Aa]ssets/Materials/Interior/Environment/SmallProps.mat
+!/[Aa]ssets/Materials/Interior/Environment/SmallProps.mat.meta
+!/[Aa]ssets/Materials/Interior/Environment/SmallProps_Light.mat
+!/[Aa]ssets/Materials/Interior/Environment/SmallProps_Light.mat.meta
+!/[Aa]ssets/Materials/Interior/Environment/StripesBeige.mat
+!/[Aa]ssets/Materials/Interior/Environment/StripesBeige.mat.meta
+!/[Aa]ssets/Materials/Interior/Environment/TrimSheetGreenPurple.mat
+!/[Aa]ssets/Materials/Interior/Environment/TrimSheetGreenPurple.mat.meta
+!/[Aa]ssets/Materials/Interior/Environment/WallGreen.mat
+!/[Aa]ssets/Materials/Interior/Environment/WallGreen.mat.meta
+!/[Aa]ssets/Materials/Interior/Environment/WallPurple.mat
+!/[Aa]ssets/Materials/Interior/Environment/WallPurple.mat.meta
+!/[Aa]ssets/Materials/Interior/Environment/WallsBlue.mat
+!/[Aa]ssets/Materials/Interior/Environment/WallsBlue.mat.meta
+!/[Aa]ssets/Materials/Interior/Environment/WoodPlanksBrown.mat
+!/[Aa]ssets/Materials/Interior/Environment/WoodPlanksBrown.mat.meta
+/[Aa]ssets/Materials/Interior/Objects/*
+!/[Aa]ssets/Materials/Interior/Objects/Dirt_Brown.mat
+!/[Aa]ssets/Materials/Interior/Objects/Dirt_Brown.mat.meta
+!/[Aa]ssets/Materials/Interior/Objects/Mat_Props.mat
+!/[Aa]ssets/Materials/Interior/Objects/Mat_Props.mat.meta
+!/[Aa]ssets/Materials/Interior/Objects/Vacuum_Indicator_Light_Mat.mat
+!/[Aa]ssets/Materials/Interior/Objects/Vacuum_Indicator_Light_Mat.mat.meta
+/[Aa]ssets/Materials/Outdoor/*
+!/[Aa]ssets/Materials/Outdoor/Cream.mat
+!/[Aa]ssets/Materials/Outdoor/Cream.mat.meta
+!/[Aa]ssets/Materials/Outdoor/White_Grid.mat
+!/[Aa]ssets/Materials/Outdoor/White_Grid.mat.meta
+/[Aa]ssets/Materials/Skyboxes/*
+!/[Aa]ssets/Materials/Skyboxes/SkyBrightCloudy.mat
+!/[Aa]ssets/Materials/Skyboxes/SkyBrightCloudy.mat.meta
+/[Aa]ssets/Materials/VFX/*
+!/[Aa]ssets/Materials/VFX/SimpleParticle_Mat.mat
+!/[Aa]ssets/Materials/VFX/SimpleParticle_Mat.mat.meta
+
+# Models: verified dependency closure only.
+!/[Aa]ssets/Models/
+!/[Aa]ssets/Models.meta
+/[Aa]ssets/Models/*
+!/[Aa]ssets/Models/Characters/
+!/[Aa]ssets/Models/Characters.meta
+!/[Aa]ssets/Models/Colllectibles/
+!/[Aa]ssets/Models/Colllectibles.meta
+!/[Aa]ssets/Models/Floor/
+!/[Aa]ssets/Models/Floor.meta
+!/[Aa]ssets/Models/Furniture/
+!/[Aa]ssets/Models/Furniture.meta
+!/[Aa]ssets/Models/Walls/
+!/[Aa]ssets/Models/Walls.meta
+/[Aa]ssets/Models/Characters/*
+!/[Aa]ssets/Models/Characters/Roomba.fbx
+!/[Aa]ssets/Models/Characters/Roomba.fbx.meta
+/[Aa]ssets/Models/Colllectibles/*
+!/[Aa]ssets/Models/Colllectibles/GemDiamond.fbx
+!/[Aa]ssets/Models/Colllectibles/GemDiamond.fbx.meta
+/[Aa]ssets/Models/Floor/*
+!/[Aa]ssets/Models/Floor/Floor2m.fbx
+!/[Aa]ssets/Models/Floor/Floor2m.fbx.meta
+!/[Aa]ssets/Models/Floor/Floor4m.fbx
+!/[Aa]ssets/Models/Floor/Floor4m.fbx.meta
+!/[Aa]ssets/Models/Floor/RugDoorMat.fbx
+!/[Aa]ssets/Models/Floor/RugDoorMat.fbx.meta
+!/[Aa]ssets/Models/Floor/RugRectangleMedium.fbx
+!/[Aa]ssets/Models/Floor/RugRectangleMedium.fbx.meta
+/[Aa]ssets/Models/Furniture/*
+!/[Aa]ssets/Models/Furniture/ChairDiningB.fbx
+!/[Aa]ssets/Models/Furniture/ChairDiningB.fbx.meta
+!/[Aa]ssets/Models/Furniture/LampTall.fbx
+!/[Aa]ssets/Models/Furniture/LampTall.fbx.meta
+!/[Aa]ssets/Models/Furniture/LightBulb.fbx
+!/[Aa]ssets/Models/Furniture/LightBulb.fbx.meta
+!/[Aa]ssets/Models/Furniture/ShelvesMediumA.fbx
+!/[Aa]ssets/Models/Furniture/ShelvesMediumA.fbx.meta
+!/[Aa]ssets/Models/Furniture/SofaCusion.fbx
+!/[Aa]ssets/Models/Furniture/SofaCusion.fbx.meta
+!/[Aa]ssets/Models/Furniture/SofaDouble.fbx
+!/[Aa]ssets/Models/Furniture/SofaDouble.fbx.meta
+!/[Aa]ssets/Models/Furniture/TableRectangleMedium.fbx
+!/[Aa]ssets/Models/Furniture/TableRectangleMedium.fbx.meta
+!/[Aa]ssets/Models/Furniture/TableRectangleShort.fbx
+!/[Aa]ssets/Models/Furniture/TableRectangleShort.fbx.meta
+/[Aa]ssets/Models/Walls/*
+!/[Aa]ssets/Models/Walls/Door.fbx
+!/[Aa]ssets/Models/Walls/Door.fbx.meta
+!/[Aa]ssets/Models/Walls/Wall1m.fbx
+!/[Aa]ssets/Models/Walls/Wall1m.fbx.meta
+!/[Aa]ssets/Models/Walls/Wall3m.fbx
+!/[Aa]ssets/Models/Walls/Wall3m.fbx.meta
+!/[Aa]ssets/Models/Walls/WallCornerInner.fbx
+!/[Aa]ssets/Models/Walls/WallCornerInner.fbx.meta
+!/[Aa]ssets/Models/Walls/WallCornerOuter.fbx
+!/[Aa]ssets/Models/Walls/WallCornerOuter.fbx.meta
+!/[Aa]ssets/Models/Walls/WallDoor2m.fbx
+!/[Aa]ssets/Models/Walls/WallDoor2m.fbx.meta
+!/[Aa]ssets/Models/Walls/WallWindowBay4m.fbx
+!/[Aa]ssets/Models/Walls/WallWindowBay4m.fbx.meta
+!/[Aa]ssets/Models/Walls/WallWindowBay4mCurtain.fbx
+!/[Aa]ssets/Models/Walls/WallWindowBay4mCurtain.fbx.meta
+
+# Prefabs: verified dependency closure only.
+!/[Aa]ssets/Prefabs/
+!/[Aa]ssets/Prefabs.meta
+/[Aa]ssets/Prefabs/*
+!/[Aa]ssets/Prefabs/Bedroom/
+!/[Aa]ssets/Prefabs/Bedroom.meta
+!/[Aa]ssets/Prefabs/Characters/
+!/[Aa]ssets/Prefabs/Characters.meta
+!/[Aa]ssets/Prefabs/Collectibles/
+!/[Aa]ssets/Prefabs/Collectibles.meta
+!/[Aa]ssets/Prefabs/Floor/
+!/[Aa]ssets/Prefabs/Floor.meta
+!/[Aa]ssets/Prefabs/Lights/
+!/[Aa]ssets/Prefabs/Lights.meta
+!/[Aa]ssets/Prefabs/Living Room/
+!/[Aa]ssets/Prefabs/Living Room.meta
+!/[Aa]ssets/Prefabs/My Prefabs/
+!/[Aa]ssets/Prefabs/My Prefabs.meta
+!/[Aa]ssets/Prefabs/Rooms/
+!/[Aa]ssets/Prefabs/Rooms.meta
+!/[Aa]ssets/Prefabs/VFX/
+!/[Aa]ssets/Prefabs/VFX.meta
+!/[Aa]ssets/Prefabs/Walls/
+!/[Aa]ssets/Prefabs/Walls.meta
+/[Aa]ssets/Prefabs/Bedroom/*
+!/[Aa]ssets/Prefabs/Bedroom/RugDoorMat_Green.prefab
+!/[Aa]ssets/Prefabs/Bedroom/RugDoorMat_Green.prefab.meta
+!/[Aa]ssets/Prefabs/Bedroom/RugRectangleLarge_Purple.prefab
+!/[Aa]ssets/Prefabs/Bedroom/RugRectangleLarge_Purple.prefab.meta
+/[Aa]ssets/Prefabs/Characters/*
+!/[Aa]ssets/Prefabs/Characters/RobotVacuum_2.prefab
+!/[Aa]ssets/Prefabs/Characters/RobotVacuum_2.prefab.meta
+/[Aa]ssets/Prefabs/Collectibles/*
+!/[Aa]ssets/Prefabs/Collectibles/Collectible_GemDiamond.prefab
+!/[Aa]ssets/Prefabs/Collectibles/Collectible_GemDiamond.prefab.meta
+/[Aa]ssets/Prefabs/Floor/*
+!/[Aa]ssets/Prefabs/Floor/Floor2m.prefab
+!/[Aa]ssets/Prefabs/Floor/Floor2m.prefab.meta
+!/[Aa]ssets/Prefabs/Floor/Floor4m.prefab
+!/[Aa]ssets/Prefabs/Floor/Floor4m.prefab.meta
+/[Aa]ssets/Prefabs/Lights/*
+!/[Aa]ssets/Prefabs/Lights/LampTall.prefab
+!/[Aa]ssets/Prefabs/Lights/LampTall.prefab.meta
+/[Aa]ssets/Prefabs/Living Room/*
+!/[Aa]ssets/Prefabs/Living Room/ChairDiningB.prefab
+!/[Aa]ssets/Prefabs/Living Room/ChairDiningB.prefab.meta
+!/[Aa]ssets/Prefabs/Living Room/ShelvesMediumA.prefab
+!/[Aa]ssets/Prefabs/Living Room/ShelvesMediumA.prefab.meta
+!/[Aa]ssets/Prefabs/Living Room/SofaDouble.prefab
+!/[Aa]ssets/Prefabs/Living Room/SofaDouble.prefab.meta
+!/[Aa]ssets/Prefabs/Living Room/TableRectangleMedium.prefab
+!/[Aa]ssets/Prefabs/Living Room/TableRectangleMedium.prefab.meta
+!/[Aa]ssets/Prefabs/Living Room/TableRectangleShort.prefab
+!/[Aa]ssets/Prefabs/Living Room/TableRectangleShort.prefab.meta
+/[Aa]ssets/Prefabs/My Prefabs/*
+!/[Aa]ssets/Prefabs/My Prefabs/BubbleLeft.prefab
+!/[Aa]ssets/Prefabs/My Prefabs/BubbleLeft.prefab.meta
+!/[Aa]ssets/Prefabs/My Prefabs/BubbleRight.prefab
+!/[Aa]ssets/Prefabs/My Prefabs/BubbleRight.prefab.meta
+!/[Aa]ssets/Prefabs/My Prefabs/MessageRowLeft.prefab
+!/[Aa]ssets/Prefabs/My Prefabs/MessageRowLeft.prefab.meta
+!/[Aa]ssets/Prefabs/My Prefabs/MessageRowRIght.prefab
+!/[Aa]ssets/Prefabs/My Prefabs/MessageRowRIght.prefab.meta
+!/[Aa]ssets/Prefabs/My Prefabs/RingDotPrefab.prefab
+!/[Aa]ssets/Prefabs/My Prefabs/RingDotPrefab.prefab.meta
+/[Aa]ssets/Prefabs/Rooms/*
+!/[Aa]ssets/Prefabs/Rooms/03_Living_Room.prefab
+!/[Aa]ssets/Prefabs/Rooms/03_Living_Room.prefab.meta
+/[Aa]ssets/Prefabs/VFX/*
+!/[Aa]ssets/Prefabs/VFX/VFX_Burst.prefab
+!/[Aa]ssets/Prefabs/VFX/VFX_Burst.prefab.meta
+/[Aa]ssets/Prefabs/Walls/*
+!/[Aa]ssets/Prefabs/Walls/Wall1m.prefab
+!/[Aa]ssets/Prefabs/Walls/Wall1m.prefab.meta
+!/[Aa]ssets/Prefabs/Walls/Wall3m.prefab
+!/[Aa]ssets/Prefabs/Walls/Wall3m.prefab.meta
+!/[Aa]ssets/Prefabs/Walls/Wall3m_Green.prefab
+!/[Aa]ssets/Prefabs/Walls/Wall3m_Green.prefab.meta
+!/[Aa]ssets/Prefabs/Walls/WallCornerInner.prefab
+!/[Aa]ssets/Prefabs/Walls/WallCornerInner.prefab.meta
+!/[Aa]ssets/Prefabs/Walls/WallCornerInner_Green.prefab
+!/[Aa]ssets/Prefabs/Walls/WallCornerInner_Green.prefab.meta
+!/[Aa]ssets/Prefabs/Walls/WallCornerOuter.prefab
+!/[Aa]ssets/Prefabs/Walls/WallCornerOuter.prefab.meta
+!/[Aa]ssets/Prefabs/Walls/WallDoor2m.prefab
+!/[Aa]ssets/Prefabs/Walls/WallDoor2m.prefab.meta
+!/[Aa]ssets/Prefabs/Walls/WallDoor2m_Green.prefab
+!/[Aa]ssets/Prefabs/Walls/WallDoor2m_Green.prefab.meta
+!/[Aa]ssets/Prefabs/Walls/WallWindowBay4m.prefab
+!/[Aa]ssets/Prefabs/Walls/WallWindowBay4m.prefab.meta
+
+# Textures: verified dependency closure only.
+!/[Aa]ssets/Textures/
+!/[Aa]ssets/Textures.meta
+/[Aa]ssets/Textures/*
+!/[Aa]ssets/Textures/Interior/
+!/[Aa]ssets/Textures/Interior.meta
+!/[Aa]ssets/Textures/Objects/
+!/[Aa]ssets/Textures/Objects.meta
+!/[Aa]ssets/Textures/Outdoor/
+!/[Aa]ssets/Textures/Outdoor.meta
+!/[Aa]ssets/Textures/Pickups/
+!/[Aa]ssets/Textures/Pickups.meta
+/[Aa]ssets/Textures/Interior/*
+!/[Aa]ssets/Textures/Interior/Floor_BeigeStripes.png
+!/[Aa]ssets/Textures/Interior/Floor_BeigeStripes.png.meta
+!/[Aa]ssets/Textures/Interior/Floor_WoodPlanks.png
+!/[Aa]ssets/Textures/Interior/Floor_WoodPlanks.png.meta
+!/[Aa]ssets/Textures/Interior/SmallProps.png
+!/[Aa]ssets/Textures/Interior/SmallProps.png.meta
+!/[Aa]ssets/Textures/Interior/SpotsGreenLime.png
+!/[Aa]ssets/Textures/Interior/SpotsGreenLime.png.meta
+!/[Aa]ssets/Textures/Interior/SpotsGrey.png
+!/[Aa]ssets/Textures/Interior/SpotsGrey.png.meta
+!/[Aa]ssets/Textures/Interior/SpotsPurpleBright.png
+!/[Aa]ssets/Textures/Interior/SpotsPurpleBright.png.meta
+!/[Aa]ssets/Textures/Interior/TrimSheet_GreenPurple.png
+!/[Aa]ssets/Textures/Interior/TrimSheet_GreenPurple.png.meta
+!/[Aa]ssets/Textures/Interior/WallBlule.png
+!/[Aa]ssets/Textures/Interior/WallBlule.png.meta
+!/[Aa]ssets/Textures/Interior/WallGreenLight.png
+!/[Aa]ssets/Textures/Interior/WallGreenLight.png.meta
+!/[Aa]ssets/Textures/Interior/WallPurple.png
+!/[Aa]ssets/Textures/Interior/WallPurple.png.meta
+/[Aa]ssets/Textures/Objects/*
+!/[Aa]ssets/Textures/Objects/Texture_Props.png
+!/[Aa]ssets/Textures/Objects/Texture_Props.png.meta
+/[Aa]ssets/Textures/Outdoor/*
+!/[Aa]ssets/Textures/Outdoor/Grid_02_BaseMap.png
+!/[Aa]ssets/Textures/Outdoor/Grid_02_BaseMap.png.meta
+/[Aa]ssets/Textures/Pickups/*
+!/[Aa]ssets/Textures/Pickups/3D/
+!/[Aa]ssets/Textures/Pickups/3D.meta
+/[Aa]ssets/Textures/Pickups/3D/*
+!/[Aa]ssets/Textures/Pickups/3D/Gems_AO.png
+!/[Aa]ssets/Textures/Pickups/3D/Gems_AO.png.meta
+!/[Aa]ssets/Textures/Pickups/3D/Gems_Albedo.png
+!/[Aa]ssets/Textures/Pickups/3D/Gems_Albedo.png.meta
+!/[Aa]ssets/Textures/Pickups/3D/Gems_MetallicSmoothness.png
+!/[Aa]ssets/Textures/Pickups/3D/Gems_MetallicSmoothness.png.meta
+
+# Sprites and Audio: nothing in the dependency closure -- stay fully ignored
+# (no override rules needed; covered by /[Aa]ssets/* above).
+
+# Images: outside the original _Unity Essentials dependency trace entirely
+# (source location: Assets/Images at the tutorial project's own root, not
+# under _Unity Essentials), but confirmed actually needed -- BubbleLeft.prefab
+# and BubbleRight.prefab's Image components reference
+# Images/Reader/containers/left-dialogue.png and right-dialogue.png by GUID.
+# Tracked wholesale (not closure-only) since the whole folder is ~40 small
+# files / ~50KB total -- too small for the closure-only discipline used for
+# Materials/Models/Prefabs/Textures above to buy anything.
+!/[Aa]ssets/Images/
+!/[Aa]ssets/Images.meta
+
+# Project scaffolding required to run the game (not part of the source
+# tutorial's asset library, so outside the dependency trace, but needed):
+!/[Aa]ssets/InputSystem_Actions.inputactions
+!/[Aa]ssets/InputSystem_Actions.inputactions.meta
+!/[Aa]ssets/Settings/
+!/[Aa]ssets/Settings.meta
+!/[Aa]ssets/Settings/**
+
+# --- END customization ---
+
 # By default unity supports Blender asset imports, *.blend1 blender files do not need to be committed to version control.
 *.blend1
 *.blend1.meta
