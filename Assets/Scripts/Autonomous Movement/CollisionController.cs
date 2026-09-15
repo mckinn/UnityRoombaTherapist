@@ -7,6 +7,9 @@ public class CollisionController : MonoBehaviour
 {
     [SerializeField] private TherapyChatController chatController;
 
+    [Tooltip("Used only to report journey_started/journey_distance on the collision EmotionState (Narrative_Log_Stream_Plan.md section 6) - not required for collision reporting itself. If left unassigned, those two fields are simply omitted (left at their EmotionState defaults) rather than causing an error.")]
+    [SerializeField] private JourneyCalculator journeyCalculator;
+
     [Header("Arena Event Rate Limiting")]
     [Tooltip("Minimum seconds between /arena/event POSTs to the Orchestrator. Each POST triggers a real LLM API call, which costs real money and time regardless of how fast collisions are physically happening - this caps that rate globally, independent of which entity triggered it. The local ANS reaction (OnEntityCollision -> Journey/Behavior) is NOT rate-limited by this; only the remote report is skipped.")]
     [SerializeField] private float minSecondsBetweenArenaEvents = 2.0f;
@@ -78,9 +81,10 @@ public class CollisionController : MonoBehaviour
     {
         EntitySensitivity sensitivity = SessionManager.Instance.GetSensitivity(entityType);
 
+        EmotionState state;
         if (sensitivity != null)
         {
-            return new EmotionState
+            state = new EmotionState
             {
                 entity_id = entityId,
                 entity_type = entityType,
@@ -88,13 +92,37 @@ public class CollisionController : MonoBehaviour
                 strength = sensitivity.strength
             };
         }
-
-        return new EmotionState
+        else
         {
-            entity_id = entityId,
-            entity_type = entityType,
-            emotion = "ambivalence",
-            strength = 0f
-        };
+            state = new EmotionState
+            {
+                entity_id = entityId,
+                entity_type = entityType,
+                emotion = "ambivalence",
+                strength = 0f
+            };
+        }
+
+        // This method is only ever called from ReportEventAsync, which is
+        // only ever invoked with "collision" (line above, in
+        // OnCollisionEnter) - so no event_type check is needed here; this
+        // controller has no proximity path. By the time this runs,
+        // OnEntityCollision has already fired synchronously (see
+        // OnCollisionEnter) and JourneyCalculator.HandleEntityCollision -
+        // its subscriber - has already created/refreshed activeJourneys for
+        // this frame, so the lookup below sees this collision's own result,
+        // not a stale one. journeyCalculator is optional (see its Tooltip);
+        // if unassigned, or no journey exists for this entity (e.g.
+        // sensitivity was null/"none", which JourneyCalculator itself
+        // ignores), journey_started/journey_distance are simply left at
+        // their EmotionState defaults (false/null).
+        if (journeyCalculator != null &&
+            journeyCalculator.ActiveJourneys.TryGetValue(entityId, out ActiveJourney journey))
+        {
+            state.journey_started = true;
+            state.journey_distance = journey.DestinationDistance;
+        }
+
+        return state;
     }
 }

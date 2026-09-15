@@ -74,6 +74,15 @@ public class EmotionState
     public string entity_type;
     public string emotion;
     public float strength;
+
+    // Phase 2 (Narrative_Log_Stream_Plan.md section 6): populated by
+    // CollisionController for a "collision" report only when
+    // JourneyCalculator actually created/refreshed a Journey for this
+    // entity. journey_distance is nullable because it only has a value
+    // when journey_started is true - leaving it unassigned (default 0)
+    // would otherwise be indistinguishable from a genuine zero distance.
+    public bool journey_started;
+    public float? journey_distance;
 }
 
 [System.Serializable]
