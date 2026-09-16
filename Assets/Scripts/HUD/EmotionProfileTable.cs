@@ -22,11 +22,34 @@ using UnityEngine;
 /// filter is here now so this widget needs no further changes whenever
 /// that Orchestrator-side work happens.
 ///
-/// Rebuild-on-update, not diffed/pooled: every OnStateUpdated, all row
-/// children are destroyed and rebuilt from the current filtered/sorted
-/// list. Simplest correct approach for what's realistically a handful of
-/// entity_types in this game - revisit only if this ever shows up as an
-/// actual performance problem, which is unlikely at this scale.
+/// Rebuild-on-change, not diffed/pooled: whenever the underlying
+/// EntitySensitivities list reference changes, all row children are
+/// destroyed and rebuilt from the current filtered/sorted list. Simplest
+/// correct approach for what's realistically a handful of entity_types in
+/// this game - revisit only if this ever shows up as an actual performance
+/// problem, which is unlikely at this scale.
+///
+/// Polls SessionManager.Instance.EntitySensitivities every Update() rather
+/// than subscribing to SessionManager.OnStateUpdated - same reasoning
+/// EmotionIntensityRing already uses (see its own doc comment): avoids
+/// depending on cross-object Awake/OnEnable ordering. That ordering
+/// dependency was a real bug here (found 2026-09-16): this component's
+/// OnEnable ran before SessionManager.Awake() had set Instance, so it
+/// silently never subscribed at all for the rest of the session - and
+/// separately, SessionManager.StartSession()'s initial
+/// entity_sensitivities never invokes OnStateUpdated in the first place
+/// (only later SendArenaEvent/SendDirtProgress calls do, via UpdateState),
+/// so even a correctly-timed subscription would have missed session-start
+/// data. Polling sidesteps both problems at once.
+///
+/// The Update() check itself is cheap: a property read plus a reference
+/// comparison against the last-seen list. SessionManager.EntitySensitivities
+/// is always reassigned to a brand-new list object rather than mutated in
+/// place (see StartSession/UpdateState), so reference inequality is a
+/// reliable, near-zero-cost "did the server send something new" signal.
+/// The actually expensive part - Rebuild(), which destroys and
+/// re-instantiates row GameObjects - only runs on the frame where that
+/// reference changes, not on every frame.
 /// </summary>
 public class EmotionProfileTable : MonoBehaviour
 {
@@ -40,27 +63,18 @@ public class EmotionProfileTable : MonoBehaviour
     [SerializeField] private EmotionColorConfig colorConfig;
 
     private readonly List<EmotionProfileRow> activeRows = new List<EmotionProfileRow>();
+    private List<EntitySensitivity> lastSeenSensitivities;
 
-    private void OnEnable()
-    {
-        if (SessionManager.Instance != null)
-        {
-            SessionManager.Instance.OnStateUpdated += HandleStateUpdated;
-            HandleStateUpdated(); // pick up whatever state already exists, don't wait for the next change
-        }
-    }
-
-    private void OnDisable()
-    {
-        if (SessionManager.Instance != null)
-        {
-            SessionManager.Instance.OnStateUpdated -= HandleStateUpdated;
-        }
-    }
-
-    private void HandleStateUpdated()
+    private void Update()
     {
         List<EntitySensitivity> sensitivities = SessionManager.Instance != null ? SessionManager.Instance.EntitySensitivities : null;
+
+        if (ReferenceEquals(sensitivities, lastSeenSensitivities))
+        {
+            return;
+        }
+
+        lastSeenSensitivities = sensitivities;
         Rebuild(sensitivities);
     }
 
