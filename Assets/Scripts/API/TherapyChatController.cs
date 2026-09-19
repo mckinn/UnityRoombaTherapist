@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using static System.Net.Mime.MediaTypeNames;
@@ -16,34 +17,26 @@ public class TherapyChatController : MonoBehaviour
     [SerializeField] private GameObject messageRowLeftPrefab;
     [SerializeField] private GameObject messageRowRightPrefab;
 
-    [Tooltip("Resets on typing, message send, and response received - see ResumeTimer's own header comment for why this is the sole intended caller of ResetTimer().")]
-    [SerializeField] private ResumeTimer resumeTimer;
-
-    [Tooltip("Entry trigger 3 of the Managed Pause design (see Planning.md) - a dialog exchange in progress is its own reason to pause, independent of settle-detection, arena-entry, or should_pause. Typing calls Pause() directly here.")]
-    [SerializeField] private PauseController pauseController;
+    // ResumeTimer and the typing-triggers-pause behavior (formerly Managed
+    // Pause's "entry trigger 3: dialog in progress") were both removed
+    // 2026-09-18 (Pause_Redesign_Implementation_Plan.md) - there is no more
+    // auto-pause of any kind in this design; pause/resume are governed
+    // entirely by the LLM's pause_directive (see SessionManager.UpdateState)
+    // and the debug key (PauseController). With chat-box focus preserved
+    // after sending a message, typing alone isn't enough of a distraction
+    // to need its own pause - confirmed acceptable to revisit later if
+    // playtesting says otherwise.
 
     private const string baseUrl = "http://localhost:8000";
 
     void Start()
     {
         inputField.onSubmit.AddListener(OnInputSubmitted);
-        inputField.onValueChanged.AddListener(OnTyping);
     }
 
     void OnDestroy()
     {
         inputField.onSubmit.RemoveListener(OnInputSubmitted);
-        inputField.onValueChanged.RemoveListener(OnTyping);
-    }
-
-    private void OnTyping(string text)
-    {
-        // Entry trigger 3: dialog in progress is its own reason to be
-        // paused, not just something that extends a pause already caused
-        // by something else. Pause() is idempotent - safe to call on every
-        // keystroke rather than needing to detect "typing just started".
-        pauseController?.Pause();
-        resumeTimer?.ResetTimer();
     }
 
     private async void OnInputSubmitted(string text)
@@ -51,7 +44,9 @@ public class TherapyChatController : MonoBehaviour
         SpawnRow(messageRowRightPrefab, text);
         Debug.Log($"[Chat R] {text}");
         inputField.text = "";
-        resumeTimer?.ResetTimer();
+
+        inputField.ActivateInputField();
+        EventSystem.current.SetSelectedGameObject(inputField.gameObject);
 
         await SendTherapyMessage(text);
     }
@@ -82,9 +77,8 @@ public class TherapyChatController : MonoBehaviour
             }
 
             OrchestratorResponse response = JsonConvert.DeserializeObject<OrchestratorResponse>(request.downloadHandler.text);
-            resumeTimer?.ResetTimer();
 
-            SessionManager.Instance.UpdateState(response.pad, response.entity_sensitivities, response.should_pause, response.movement_directive);
+            SessionManager.Instance.UpdateState(response.pad, response.entity_sensitivities, response.pause_directive, response.movement_directive);
 
             // SpawnRow(messageRowLeftPrefab, response.dialog);
             DisplayLeftMessage(response.dialog);

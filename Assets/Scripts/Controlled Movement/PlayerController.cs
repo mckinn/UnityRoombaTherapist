@@ -18,6 +18,14 @@ using UnityEngine.InputSystem;
 /// Jump() is a separate, decoupled vertical impulse. It's callable by player
 /// input (spacebar) or by other logic (e.g. a collision-triggered "jump for
 /// joy" Behavior) - it has no relationship to planar movement.
+///
+/// Spacebar jump is suppressed while a UI text field has keyboard focus (see
+/// suppressJumpWhileTextFieldFocused) - added 2026-09-17 because Unity's new
+/// Input System reads raw keyboard state regardless of UI focus, so typing a
+/// space into the therapist chat box was triggering a jump on every word.
+/// The focus check itself now lives in the shared InputFocusUtility (moved
+/// 2026-09-18, Pause_Redesign_Implementation_Plan.md section 5.6) since
+/// JourneyCalculator's arrow-key reading needed the identical check.
 /// </summary>
 [RequireComponent(typeof(Rigidbody))]
 public class PlayerController : MonoBehaviour
@@ -27,6 +35,9 @@ public class PlayerController : MonoBehaviour
 
     [Tooltip("Upward velocity applied by a jump impulse.")]
     public float jumpForce = 5.0f;
+
+    [Tooltip("When enabled (default), pressing Space will NOT trigger a jump while a UI text field (e.g. the therapist chat input) currently has keyboard focus. Turn off to restore the old behavior of jumping on Space regardless of focus.")]
+    [SerializeField] private bool suppressJumpWhileTextFieldFocused = true;
 
     private Rigidbody rb;
 
@@ -40,6 +51,10 @@ public class PlayerController : MonoBehaviour
     {
         if (Keyboard.current.spaceKey.wasPressedThisFrame)
         {
+            if (suppressJumpWhileTextFieldFocused && InputFocusUtility.IsTextFieldFocused())
+            {
+                return;
+            }
             Jump();
         }
     }

@@ -16,7 +16,7 @@ public class SessionManager : MonoBehaviour
     public List<EntitySensitivity> EntitySensitivities { get; private set; }
     public event Action OnStateUpdated;
 
-    [Tooltip("Receives should_pause=true from any LLM-backed response (arena event, dirt progress, or therapy dialog) - see Planning.md, 'Managed Pause', 'Stop, mediated by the LLM'.")]
+    [Tooltip("Receives pause_directive from any LLM-backed response (arena event, dirt progress, or therapy dialog) - see Pause_Redesign_Implementation_Plan.md.")]
     [SerializeField] private PauseController pauseController;
 
     [Tooltip("Receives movement_directive from any LLM-backed response - see Movement_Concurrency_Plan.md section 4, item 1. Must be wired in the Inspector; a [SerializeField] default here would be silently shadowed by whatever the scene/prefab has serialized for this slot if it's left unassigned, same gotcha already hit elsewhere in this project.")]
@@ -49,31 +49,47 @@ public class SessionManager : MonoBehaviour
     /// <summary>
     /// Shared choke point for every LLM-backed response - SendArenaEvent,
     /// SendDirtProgress, and TherapyChatController's own therapy/message
-    /// call all funnel through here. shouldPause and movementDirective both
-    /// default so this stays source-compatible with any call site that
-    /// predates them (there are none currently, but no reason to force
-    /// every future caller to pass every field explicitly either).
-    /// should_pause is one-directional: true calls Pause(); false does
-    /// nothing - it is not a resume signal, resume stays governed entirely
-    /// by the separate, unified resume condition regardless of what
-    /// triggered the pause (see Planning.md, "Managed Pause").
+    /// call all funnel through here. pauseDirective and movementDirective
+    /// both default so this stays source-compatible with any call site
+    /// that predates them (there are none currently, but no reason to
+    /// force every future caller to pass every field explicitly either).
+    ///
+    /// Updated 2026-09-18 (Pause_Redesign_Implementation_Plan.md): replaces
+    /// the old one-directional should_pause bool. pauseDirective is now a
+    /// genuine tri-state - "pause" calls Pause(), "resume" calls Resume(),
+    /// and null (no opinion this turn) leaves pause state exactly as it is.
+    /// This is the first time Resume() is reachable from an LLM response at
+    /// all; previously the only ways to resume were ResumeTimer's
+    /// quiet-period timeout or the debug key.
+    ///
     /// movementDirective is handed straight to JourneyCalculator - see
     /// Movement_Concurrency_Plan.md section 4, and JourneyCalculator.
     /// HandleLLMDirective's own doc comment for what happens when it's
     /// non-null.
     /// </summary>
-    public void UpdateState(PADState pad, List<EntitySensitivity> sensitivities, bool shouldPause = false, MovementDirective movementDirective = null)
+    public void UpdateState(PADState pad, List<EntitySensitivity> sensitivities, string pauseDirective = null, MovementDirective movementDirective = null)
     {
         CurrentPad = pad;
         EntitySensitivities = sensitivities;
         OnStateUpdated?.Invoke();
         Debug.Log($"SessionManager UpdateState - PAD: {JsonConvert.SerializeObject(CurrentPad)}");
-        Debug.Log($"SessionManager UpdateState - Evaluatng Pause: {shouldPause}");
+        Debug.Log($"SessionManager UpdateState - Evaluating pause_directive: {pauseDirective ?? "(none)"}");
 
-        if (shouldPause && pauseController != null)
+        if (pauseController != null)
         {
-            Debug.Log($"SessionManager UpdateState - Pausing");
-            pauseController.Pause();
+            switch (pauseDirective)
+            {
+                case "pause":
+                    Debug.Log($"SessionManager UpdateState - Pausing");
+                    pauseController.Pause();
+                    break;
+                case "resume":
+                    Debug.Log($"SessionManager UpdateState - Resuming");
+                    pauseController.Resume();
+                    break;
+                    // null (or any unrecognized value): no opinion this turn -
+                    // leave IsPaused exactly as it is.
+            }
         }
 
         if (movementDirective != null)
@@ -218,7 +234,7 @@ public class SessionManager : MonoBehaviour
             }
 
             OrchestratorResponse response = JsonConvert.DeserializeObject<OrchestratorResponse>(request.downloadHandler.text);
-            UpdateState(response.pad, response.entity_sensitivities, response.should_pause, response.movement_directive);
+            UpdateState(response.pad, response.entity_sensitivities, response.pause_directive, response.movement_directive);
             return response;
         }
     }
@@ -259,7 +275,7 @@ public class SessionManager : MonoBehaviour
             }
 
             OrchestratorResponse response = JsonConvert.DeserializeObject<OrchestratorResponse>(request.downloadHandler.text);
-            UpdateState(response.pad, response.entity_sensitivities, response.should_pause, response.movement_directive);
+            UpdateState(response.pad, response.entity_sensitivities, response.pause_directive, response.movement_directive);
             return response;
         }
     }
