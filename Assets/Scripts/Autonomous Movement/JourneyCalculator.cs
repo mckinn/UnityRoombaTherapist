@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -59,6 +60,9 @@ public class JourneyCalculator : MonoBehaviour
     [Header("Debug")]
     [Tooltip("Testing aid: when true, keyboard input is added on top of the blended Journey movement instead of being ignored. Lets you mock the effect of an additional simultaneous movement source before Step 7 actually produces one. Leave false for normal play - this deliberately reintroduces the authority conflict the single-caller design otherwise prevents.")]
     [SerializeField] private bool allowManualNudgeDuringJourney = false;
+
+    [Tooltip("Whether Arrow Key navigation is allowed at all.")]
+    [SerializeField] private bool wasdAllowed = true;
 
     [Tooltip("Minimum seconds between blend-diagnostic log lines (see ComputeBlendedJourneyDirection) - throttled since it would otherwise log every FixedUpdate tick while 2+ journeys are simultaneously active.")]
     [SerializeField] private float blendDiagnosticLogIntervalSeconds = 0.5f;
@@ -753,7 +757,7 @@ public class JourneyCalculator : MonoBehaviour
     {
         Vector3 moveInput = Vector3.zero;
 
-        if (InputFocusUtility.IsTextFieldFocused())
+        if (InputFocusUtility.IsTextFieldFocused() || !wasdAllowed)
         {
             return moveInput;
         }
