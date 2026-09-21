@@ -57,6 +57,18 @@ public class DirtProgressReporter : MonoBehaviour
     private int nextReportThreshold;
     private bool finalReportSent;
 
+    /// <summary>
+    /// Current dirt-cleanup fraction (0-1), for GameScoreTable's Dirt
+    /// Removed row (see GameScoreTable_Implementation_Plan.md section 4.1) -
+    /// added 2026-09-21 since nothing previously exposed this outside the
+    /// threshold-report mechanism above. The presumedTotal &lt;= 0 fallback
+    /// deliberately mirrors SendProgressReportAsync's own convention just
+    /// below (percentComplete = 100f in that same case), so this doesn't
+    /// introduce a second, inconsistent answer for the same edge case.
+    /// </summary>
+    public float PercentCollected01 =>
+        presumedTotal > 0 ? Mathf.Clamp01((float)collectedCount / presumedTotal) : 1f;
+
     private void Awake()
     {
         if (instance != null && instance != this)
@@ -174,9 +186,12 @@ public class DirtProgressReporter : MonoBehaviour
             return;
         }
 
-        float percentComplete = presumedTotal > 0
-            ? Mathf.Clamp01((float)collectedCount / presumedTotal) * 100f
-            : 100f;
+        // Reuses PercentCollected01 rather than recomputing the same ratio
+        // here - added 2026-09-21 alongside that property so this method's
+        // percentComplete and GameScoreTable's Dirt Removed row are
+        // provably reading the same number, not two independently
+        // maintained copies of the same formula.
+        float percentComplete = PercentCollected01 * 100f;
 
         Dictionary<string, EntitySensitivity> beforeSensitivities =
             chatController != null ? chatController.SnapshotSensitivities() : null;

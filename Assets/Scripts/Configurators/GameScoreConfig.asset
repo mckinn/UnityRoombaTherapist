@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 301100fedaab52f4aba8c002dab1d908, type: 3}
+  m_Name: GameScoreConfig
+  m_EditorClassIdentifier: Assembly-CSharp::GameScoreConfig
+  dirtWeight: 0.2
+  timeWeight: 0.2
+  damageWeight: 0.2
+  emotionsWeight: 0.1
+  padWeight: 0.1
+  therapistWeight: 0.2
+  entitySensitivityHighRange: 4
+  padLowRange: -3
+  padHighRange: 3
+  totalAllowedSeconds: 300
+  targetWordsForFiftyPercent: 150

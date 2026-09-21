@@ -29,6 +29,16 @@ public class TherapyChatController : MonoBehaviour
 
     private const string baseUrl = "http://localhost:8000";
 
+    /// <summary>
+    /// Cumulative word count across every message the Therapist (player) has
+    /// submitted this session - feeds GameScoreTable's Therapist Need row
+    /// (see GameScoreTable_Implementation_Plan.md section 4.6). Added
+    /// 2026-09-21; nothing tracked this before. Lives here rather than on
+    /// SessionManager since this is the only place a submitted message is
+    /// already being handled, and nothing else needs the count.
+    /// </summary>
+    public int TotalWordsSpoken { get; private set; }
+
     void Start()
     {
         inputField.onSubmit.AddListener(OnInputSubmitted);
@@ -43,6 +53,7 @@ public class TherapyChatController : MonoBehaviour
     {
         SpawnRow(messageRowRightPrefab, text);
         Debug.Log($"[Chat R] {text}");
+        TotalWordsSpoken += CountWords(text);
         inputField.text = "";
 
         inputField.ActivateInputField();
@@ -86,6 +97,20 @@ public class TherapyChatController : MonoBehaviour
 
         }
     }
+    /// <summary>
+    /// Splits on any whitespace (spaces, tabs, newlines) and drops empty
+    /// entries, so extra spacing or a blank/whitespace-only submission never
+    /// inflates the count - an empty string correctly counts as 0 words.
+    /// </summary>
+    private static int CountWords(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return 0;
+        }
+        return text.Split((char[])null, StringSplitOptions.RemoveEmptyEntries).Length;
+    }
+
     /// <summary>
     ///  one of two methods used to post messaging information in the message log.   This is due for some consolidation.
     /// </summary>

@@ -86,7 +86,7 @@ GameObject:
   - component: {fileID: 6187353674043043948}
   - component: {fileID: 4030392506386024687}
   - component: {fileID: 5351689682388636701}
-  - component: {fileID: 2589375430332642782}
+  - component: {fileID: 1967977819750462959}
   m_Layer: 5
   m_Name: GameScoreRow
   m_TagString: Untagged
@@ -152,7 +152,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &2589375430332642782
+--- !u!114 &1967977819750462959
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -161,11 +161,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 3868136494790259273}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e1be5035c56614b4a9b42633e735702c, type: 3}
+  m_Script: {fileID: 11500000, guid: 298f65d3135d82a448f6caf7ddeeba1e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::EmotionProfileRow
-  entityLabel: {fileID: 5428194323072978252}
-  emotionLabel: {fileID: 0}
+  m_EditorClassIdentifier: Assembly-CSharp::GameScoreRow
+  measureLabel: {fileID: 5428194323072978252}
   barFillImage: {fileID: 6723280408095860235}
 --- !u!1 &5053145108999250043
 GameObject:
