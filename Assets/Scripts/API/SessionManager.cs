@@ -165,20 +165,14 @@ public class SessionManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Seeds landmarkIdentity as a permanent, always-available Journey
-    /// immediately after session start - see landmarkIdentity's own
+    /// Seeds landmarkIdentity (the rug) as a permanent, always-available
+    /// Journey immediately after session start - see landmarkIdentity's own
     /// tooltip and JourneyCalculator.SeedLandmarkJourney's doc comment for
-    /// why. Two steps, mirroring the split between local (Unity) and
-    /// server (Orchestrator) state everywhere else in this codebase:
-    /// SeedLandmarkJourney creates the local ActiveJourney directly, then
-    /// this method reports one ordinary synthetic "collision" event so the
-    /// Orchestrator's entity_roster picks it up under the SAME entity_id,
-    /// through the existing /arena/event pipeline unchanged - no new
-    /// server-side code needed. entity_roster.record_collision has no
-    /// strength/emotion gate, and a single ambivalence/0 event won't cross
-    /// any event_aggregation threshold (see DEFAULT_ROLLUP_THRESHOLDS), so
-    /// this costs zero LLM calls. No-ops if landmarkIdentity isn't wired
-    /// up - landmark seeding is opt-in, not required.
+    /// why. No-ops if landmarkIdentity isn't wired up - landmark seeding is
+    /// opt-in, not required. The actual seeding work is in SeedLandmark
+    /// below, shared with any other landmark seeded later, mid-session
+    /// (e.g. the egress door - see DoorOpener and
+    /// Egress_Door_Implementation_Plan.md).
     /// </summary>
     private async Awaitable SeedLandmarkIfConfigured()
     {
@@ -187,21 +181,54 @@ public class SessionManager : MonoBehaviour
             return;
         }
 
-        if (journeyCalculator == null)
+        await SeedLandmark(landmarkIdentity, landmarkEntityType);
+    }
+
+    /// <summary>
+    /// Registers identity as a permanent, always-available Journey/
+    /// movement_directive destination. Two steps, mirroring the split
+    /// between local (Unity) and server (Orchestrator) state everywhere
+    /// else in this codebase: SeedLandmarkJourney creates the local
+    /// ActiveJourney directly, then this method reports one ordinary
+    /// synthetic "collision" event so the Orchestrator's entity_roster
+    /// picks it up under the SAME entity_id, through the existing
+    /// /arena/event pipeline unchanged - no new server-side code needed.
+    /// entity_roster.record_collision has no strength/emotion gate, and a
+    /// single ambivalence/0 event won't cross any event_aggregation
+    /// threshold (see DEFAULT_ROLLUP_THRESHOLDS), so this costs zero LLM
+    /// calls.
+    ///
+    /// Extracted 2026-09-23 (Egress_Door_Implementation_Plan.md) out of
+    /// what was originally SeedLandmarkIfConfigured's whole body, so a
+    /// second landmark - the egress door, seeded later, mid-session, once
+    /// the dirt threshold is reached - goes through the exact same path
+    /// the rug already used at startup, rather than a second, drifting
+    /// copy of this logic. Safe to call at any time during play, not just
+    /// at startup: JourneyCalculator.SeedLandmarkJourney itself no-ops if
+    /// this entity_id has already been seeded.
+    /// </summary>
+    public async Awaitable SeedLandmark(EntityIdentity identity, string entityType)
+    {
+        if (identity == null)
         {
-            Debug.LogWarning("SessionManager: landmarkIdentity is set but journeyCalculator is not assigned - cannot seed a landmark Journey.");
             return;
         }
 
-        string landmarkId = landmarkIdentity.GetOrAssignId();
-        journeyCalculator.SeedLandmarkJourney(landmarkIdentity, landmarkEntityType, landmarkIdentity.transform.position);
+        if (journeyCalculator == null)
+        {
+            Debug.LogWarning($"SessionManager: SeedLandmark called for entity_type '{entityType}' but journeyCalculator is not assigned - cannot seed a landmark Journey.");
+            return;
+        }
+
+        string landmarkId = identity.GetOrAssignId();
+        journeyCalculator.SeedLandmarkJourney(identity, entityType, identity.transform.position);
 
         await SendArenaEvent("collision", new List<EmotionState>
         {
             new EmotionState
             {
                 entity_id = landmarkId,
-                entity_type = landmarkEntityType,
+                entity_type = entityType,
                 emotion = "ambivalence",
                 strength = 0f
             }

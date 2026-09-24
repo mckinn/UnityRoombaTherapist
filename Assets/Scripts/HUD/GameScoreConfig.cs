@@ -82,4 +82,10 @@ public class GameScoreConfig : ScriptableObject
     [Tooltip("The word count at which the Therapist Need score is exactly 0.5 (the TANH formula's G7 term) - fewer words than this scores higher, more scores lower. Arbitrary placeholder - no play-test data exists yet for typical therapy-dialog length.")]
     [SerializeField] private float targetWordsForFiftyPercent = 150f;
     public float TargetWordsForFiftyPercent => targetWordsForFiftyPercent;
+
+    [Header("Egress Door (Egress_Door_Implementation_Plan.md)")]
+
+    [Tooltip("Dirt-collection fraction (0-1, see DirtProgressReporter.PercentCollected01) at which the egress door unlocks - checked by DoorOpener. Not otherwise tied to the six weights above.")]
+    [SerializeField, Range(0f, 1f)] private float exitDirtThreshold01 = 0.8f;
+    public float ExitDirtThreshold01 => exitDirtThreshold01;
 }
