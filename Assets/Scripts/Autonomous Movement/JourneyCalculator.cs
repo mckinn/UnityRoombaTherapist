@@ -370,13 +370,13 @@ public class JourneyCalculator : MonoBehaviour
             return;
         }
 
-        float destinationDistance = movementConfig.ComputeDestinationDistance("ambivalence", 0f);
+        float destinationDistance = movementConfig.ComputeDestinationDistance("destination", 0f);
 
         activeJourneys[entityId] = new ActiveJourney
         {
             Entity = identity,
             EntityType = entityType,
-            Emotion = "ambivalence",
+            Emotion = "destination",
             Strength = 0f,
             DestinationDistance = destinationDistance,
             LastKnownPosition = position,

@@ -45,6 +45,8 @@ public class EmotionMovementConfig : ScriptableObject
         // a flat midpoint for now. Worth a separate discussion on how/where
         // randomization should apply before this one is trusted.
         new EmotionDistanceBounds { emotion = "ambivalence", L = 5f, H = 5f  },
+        // the destination emotion is for things that are just destinations
+        new EmotionDistanceBounds { emotion = "destination", L = 0f, H = 0f  },
     };
 
     /// <summary>

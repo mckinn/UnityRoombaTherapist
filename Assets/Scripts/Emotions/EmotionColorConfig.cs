@@ -25,6 +25,7 @@ public class EmotionColorConfig : ScriptableObject
         new EmotionColorEntry { emotion = "disgust",     color = new Color(0.35f, 0.65f, 0.20f) },
         new EmotionColorEntry { emotion = "curiosity",   color = new Color(0.15f, 0.60f, 1.00f) },
         new EmotionColorEntry { emotion = "ambivalence", color = new Color(0.60f, 0.60f, 0.60f) },
+        new EmotionColorEntry { emotion = "destination", color = new Color(0f, 0f, 0f) },
     };
 
     [Tooltip("Color shown before any collision has ever happened.")]

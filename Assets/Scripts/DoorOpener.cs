@@ -26,14 +26,16 @@ public class DoorOpener : MonoBehaviour
     [Tooltip("Supplies ExitDirtThreshold01 - the dirt-collection fraction (0-1) at which this door unlocks.")]
     [SerializeField] private GameScoreConfig config;
 
-    [Tooltip("This door's own identity, used to register it as a landmark/movement_directive destination once unlocked. Must be on the same GameObject as this script (the door's existing 'egressDoor' tag is what EntityIdentity.GetOrAssignId() will use).")]
+    [Tooltip("This is the GameObject that will both act as the destination for leaving the room, and detect the departure from the room.  Imagine a turnstile at the other side of the door.  It is not the door, because the door has opened and is behind the wall.")]
     [SerializeField] private EntityIdentity entityIdentity;
 
     [Tooltip("entity_type reported to the Orchestrator when this door is seeded as a landmark - should match this GameObject's tag (door) case-insensitively, the same convention SessionManager's landmarkEntityType uses for the rug.")]
-    [SerializeField] private string landmarkEntityType = "door";
+    [SerializeField] private string landmarkEntityType = "exit";
 
     private Animator doorAnimator;
     private bool doorUnlocked;
+
+    private BoxCollider boxCollider;
 
     void Start()
     {
@@ -73,6 +75,13 @@ public class DoorOpener : MonoBehaviour
                 // for an Awaitable call whose caller doesn't need to block on it.
                 _ = SessionManager.Instance.SeedLandmark(entityIdentity, landmarkEntityType);
             }
+            // Prior to being able to exit, the boxcollider that is used to trigger the door
+            // opening gets in the way of the game play.   When the threshold is crossed one of the
+            // things that needs to be done is the enabling of the boxcollider that triggers the
+            // opening of the door
+            boxCollider = GetComponent<BoxCollider>();
+            boxCollider.enabled = true;
+            boxCollider.isTrigger = true;
         }
     }
 

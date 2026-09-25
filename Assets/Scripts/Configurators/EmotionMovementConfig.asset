@@ -28,7 +28,7 @@ MonoBehaviour:
   - emotion: ambivalence
     L: 2
     H: 2
-  epsilonSafetyFactor: 1.5
+  epsilonSafetyFactor: 0.1
   minClosingSpeed: 0.5
   maxClosingSpeed: 1
   highArousalMeansFastClosing: 1

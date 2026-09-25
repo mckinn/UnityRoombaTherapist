@@ -229,7 +229,7 @@ public class SessionManager : MonoBehaviour
             {
                 entity_id = landmarkId,
                 entity_type = entityType,
-                emotion = "ambivalence",
+                emotion = "destination",
                 strength = 0f
             }
         });
