@@ -167,7 +167,8 @@ public class TherapyChatController : MonoBehaviour
         { "curiosity", Color.yellow },
         { "joy", Color.green },
         { "disgust", Color.purple},
-        { "none", Color.white }
+        { "none", Color.white },
+        { "destination", Color.black }
     };
 
     public Dictionary<string, EntitySensitivity> SnapshotSensitivities()

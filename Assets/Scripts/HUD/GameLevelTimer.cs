@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 /// <summary>
@@ -20,13 +21,25 @@ using UnityEngine;
 /// movement (see Pause_Redesign_Implementation_Plan.md). A plain
 /// Time.time-based elapsed calculation is therefore already exactly what
 /// "pause doesn't stop the clock" asks for.
+///
+/// Extended 2026-09-25 (Freeze_And_Stop_Implementation_Plan.md) with
+/// OnTimeExpired - one of the two mechanical Freeze triggers, alongside
+/// EgressExitDetector.OnExitReached. This component still only reports what
+/// happened, the same single-responsibility stance as before: it doesn't
+/// know FreezeController exists, doesn't gate or stop anything itself, and
+/// keeps counting down exactly the same way regardless of whether anything
+/// is listening.
 /// </summary>
 public class GameLevelTimer : MonoBehaviour
 {
     [Tooltip("Supplies totalAllowedSeconds - the duration RemainingFraction01 decays from 1.0 to 0.0 over.")]
     [SerializeField] private GameScoreConfig config;
 
+    /// <summary>Fires once, the first frame RemainingFraction01 reaches 0 - same one-shot pattern EgressExitDetector already uses for OnExitReached.</summary>
+    public event Action OnTimeExpired;
+
     private float startTime;
+    private bool timeExpiredFired;
 
     private void Awake()
     {
@@ -38,18 +51,27 @@ public class GameLevelTimer : MonoBehaviour
         }
     }
 
+    private void Update()
+    {
+        if (!timeExpiredFired && RemainingFraction01 <= 0f)
+        {
+            timeExpiredFired = true;
+            Debug.Log("GameLevelTimer: time expired.");
+            OnTimeExpired?.Invoke();
+        }
+    }
+
     /// <summary>
     /// 1.0 at game start, decaying linearly to 0.0 as config.TotalAllowedSeconds
     /// elapses, then holding at 0.0 rather than going negative. This
-    /// component only reports the fraction - it has no opinion on what
-    /// happens once it reaches zero (that's a future story's job, per Plan
-    /// section 3.11's win/loss-consequence scope boundary).
-    ///
-    /// Falls back to 1.0 (best case, not worst case) if misconfigured -
-    /// same "missing data reads as best case" convention DirtProgressReporter
+    /// component only reports the fraction (and, since 2026-09-25, the
+    /// one-shot OnTimeExpired event above) - a misconfigured config falling
+    /// back to 1.0 below simply means OnTimeExpired never fires, the same
+    /// "missing data reads as best case" convention DirtProgressReporter
     /// already uses for its own presumedTotal &lt;= 0 edge case - so a setup
-    /// mistake here doesn't quietly tank the whole OVERALL score in a way
-    /// that's hard to trace back to this component.
+    /// mistake here doesn't quietly tank the whole OVERALL score, or force a
+    /// Freeze that was never really earned, in a way that's hard to trace
+    /// back to this component.
     /// </summary>
     public float RemainingFraction01
     {

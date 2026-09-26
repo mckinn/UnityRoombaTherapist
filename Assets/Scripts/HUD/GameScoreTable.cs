@@ -22,6 +22,22 @@ using UnityEngine;
 /// (non-singleton) component references this story added
 /// (GameLevelTimer, and TherapyChatController for its new
 /// TotalWordsSpoken). No Orchestrator/LLM involvement.
+///
+/// Extended 2026-09-25 (Freeze_And_Stop_Implementation_Plan.md): on the
+/// first Update() after freezeController.IsFrozen goes true, every
+/// contributor's current value is captured once into a snapshot. From then
+/// on, each row independently either holds that snapshot or keeps
+/// recomputing live, per its own GameScoreConfig toggle (FreezeDirtScore
+/// etc.) - deliberately per-row, not a single "is the whole table frozen"
+/// switch, because three of the six contributors (Emotions/PAD/Therapist
+/// Need) are dialog-driven, not movement-driven, and Freezing does not
+/// stop Therapist dialog, so those three CAN keep changing through a
+/// Freeze if their toggle is set to false. This is also why the freeze
+/// isn't implemented by stopping GameLevelTimer/SessionManager/
+/// TherapyChatController themselves - none of those three sources should
+/// be told to stop, only whether GameScoreTable keeps reading them live.
+/// OVERALL has no toggle of its own: it's always the live weighted sum of
+/// whatever the six row values currently are, frozen or not.
 /// </summary>
 public class GameScoreTable : MonoBehaviour
 {
@@ -31,7 +47,7 @@ public class GameScoreTable : MonoBehaviour
     [Tooltip("Parent all rows are instantiated under - give it a Vertical Layout Group so rows stack automatically, same as EmotionProfileTable's rowContainer.")]
     [SerializeField] private RectTransform rowContainer;
 
-    [Tooltip("Supplies every weight and range used below - see GameScoreConfig.")]
+    [Tooltip("Supplies every weight and range used below, plus the six FreezeXScore toggles - see GameScoreConfig.")]
     [SerializeField] private GameScoreConfig config;
 
     [Tooltip("Supplies RemainingFraction01 for the Time Remaining row. No singleton on this component (unlike SessionManager/DirtProgressReporter), so it must be wired here explicitly.")]
@@ -39,6 +55,17 @@ public class GameScoreTable : MonoBehaviour
 
     [Tooltip("Supplies TotalWordsSpoken for the Therapist Need row. No singleton on this component either - same reason as gameLevelTimer above.")]
     [SerializeField] private TherapyChatController chatController;
+
+    [Tooltip("Supplies IsFrozen - see Freeze_And_Stop_Implementation_Plan.md. No singleton on this component either, same reason as gameLevelTimer/chatController above. Leave unassigned to disable freeze-snapshot behavior entirely (every row then always computes live, as if never frozen).")]
+    [SerializeField] private FreezeController freezeController;
+
+    private float dirtScoreSnapshot;
+    private float timeScoreSnapshot;
+    private float damageScoreSnapshot;
+    private float emotionsScoreSnapshot;
+    private float padScoreSnapshot;
+    private float therapistScoreSnapshot;
+    private bool hasCapturedFreezeSnapshot;
 
     private static readonly string[] RowLabels =
     {
@@ -80,12 +107,40 @@ public class GameScoreTable : MonoBehaviour
 
     private void Update()
     {
-        float dirtScore = ComputeDirtScore();
-        float timeScore = ComputeTimeScore();
-        float damageScore = ComputeDamageScore();
-        float emotionsScore = ComputeEmotionsScore();
-        float padScore = ComputePadScore();
-        float therapistScore = ComputeTherapistScore();
+        bool isFrozen = freezeController != null && freezeController.IsFrozen;
+
+        // Captured exactly once, the first Update() after IsFrozen goes
+        // true - not re-captured on every subsequent frozen frame. This is
+        // the "state at issuance of Freeze" moment every FreezeXScore=true
+        // row below will hold from now on.
+        if (isFrozen && !hasCapturedFreezeSnapshot)
+        {
+            dirtScoreSnapshot = ComputeDirtScore();
+            timeScoreSnapshot = ComputeTimeScore();
+            damageScoreSnapshot = ComputeDamageScore();
+            emotionsScoreSnapshot = ComputeEmotionsScore();
+            padScoreSnapshot = ComputePadScore();
+            therapistScoreSnapshot = ComputeTherapistScore();
+            hasCapturedFreezeSnapshot = true;
+            Debug.Log("GameScoreTable: Freeze snapshot captured.");
+        }
+
+        // Each row independently either holds its snapshot or keeps
+        // recomputing live, per its own config toggle - see this class's
+        // own doc comment for why this is per-row rather than one switch.
+        // The live Compute*Score() call is skipped entirely (not just
+        // ignored) whenever the snapshot is used, so a frozen, held row
+        // has no dependency left on whatever it used to read from.
+        float dirtScore = (isFrozen && config != null && config.FreezeDirtScore) ? dirtScoreSnapshot : ComputeDirtScore();
+        float timeScore = (isFrozen && config != null && config.FreezeTimeScore) ? timeScoreSnapshot : ComputeTimeScore();
+        float damageScore = (isFrozen && config != null && config.FreezeDamageScore) ? damageScoreSnapshot : ComputeDamageScore();
+        float emotionsScore = (isFrozen && config != null && config.FreezeEmotionsScore) ? emotionsScoreSnapshot : ComputeEmotionsScore();
+        float padScore = (isFrozen && config != null && config.FreezePadScore) ? padScoreSnapshot : ComputePadScore();
+        float therapistScore = (isFrozen && config != null && config.FreezeTherapistScore) ? therapistScoreSnapshot : ComputeTherapistScore();
+
+        // OVERALL has no freeze toggle of its own - always the live
+        // weighted sum of whatever the six values above currently are,
+        // whichever of them are frozen or live this frame.
         float overallScore = ComputeOverallScore(dirtScore, timeScore, damageScore, emotionsScore, padScore, therapistScore);
 
         rowOverall?.SetScore(overallScore);

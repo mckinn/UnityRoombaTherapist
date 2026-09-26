@@ -33,6 +33,26 @@ public class SessionStartResponse
     public List<EntitySensitivity> entity_sensitivities;
 }
 
+/// <summary>
+/// Mirrors models.py's EndSessionRequest exactly - see
+/// Freeze_And_Stop_Implementation_Plan.md. Unity has never called
+/// /session/end before this story; SessionManager.EndSession() is the
+/// first caller.
+/// </summary>
+[System.Serializable]
+public class EndSessionRequest
+{
+    public string session_id;
+}
+
+/// <summary>Mirrors models.py's EndSessionResponse exactly - see EndSessionRequest above.</summary>
+[System.Serializable]
+public class EndSessionResponse
+{
+    public string session_id;
+    public int message_count;
+}
+
 [System.Serializable]
 public class TherapyMessageRequest
 {

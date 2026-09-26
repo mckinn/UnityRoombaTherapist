@@ -88,4 +88,30 @@ public class GameScoreConfig : ScriptableObject
     [Tooltip("Dirt-collection fraction (0-1, see DirtProgressReporter.PercentCollected01) at which the egress door unlocks - checked by DoorOpener. Not otherwise tied to the six weights above.")]
     [SerializeField, Range(0f, 1f)] private float exitDirtThreshold01 = 0.8f;
     public float ExitDirtThreshold01 => exitDirtThreshold01;
+
+    [Header("Freeze Behavior (Freeze_And_Stop_Implementation_Plan.md)")]
+
+    [Tooltip("Read by GameScoreTable. True (the default) means the Dirt Removed row snapshots its value the instant a Freeze happens and holds it from then on - 'the state at issuance of Freeze, preserved for discussion.' False lets it keep calling ComputeDirtScore() every frame, live, straight through the Freeze - useful for experimenting with whether letting a contributor keep moving during the post-Freeze Therapist conversation (which is explicitly still happening) is a useful teaching signal.")]
+    [SerializeField] private bool freezeDirtScore = true;
+    public bool FreezeDirtScore => freezeDirtScore;
+
+    [Tooltip("Same meaning as freezeDirtScore above, for the Time Remaining row (ComputeTimeScore()).")]
+    [SerializeField] private bool freezeTimeScore = true;
+    public bool FreezeTimeScore => freezeTimeScore;
+
+    [Tooltip("Same meaning as freezeDirtScore above, for the Damage Done row (ComputeDamageScore()) - has no practical effect today since that row is a hardcoded stub, but kept for symmetry with the other five.")]
+    [SerializeField] private bool freezeDamageScore = true;
+    public bool FreezeDamageScore => freezeDamageScore;
+
+    [Tooltip("Same meaning as freezeDirtScore above, for the Emotions row (ComputeEmotionsScore()). This row is dialog-driven, not movement-driven, so unlike Dirt this one can genuinely keep changing through a Freeze if set to false, since Freezing does not stop Therapist dialog.")]
+    [SerializeField] private bool freezeEmotionsScore = true;
+    public bool FreezeEmotionsScore => freezeEmotionsScore;
+
+    [Tooltip("Same meaning as freezeDirtScore above, for the PAD row (ComputePadScore()). Dialog-driven like Emotions above - see that tooltip.")]
+    [SerializeField] private bool freezePadScore = true;
+    public bool FreezePadScore => freezePadScore;
+
+    [Tooltip("Same meaning as freezeDirtScore above, for the Therapist Need row (ComputeTherapistScore()). Dialog-driven like Emotions above - see that tooltip.")]
+    [SerializeField] private bool freezeTherapistScore = true;
+    public bool FreezeTherapistScore => freezeTherapistScore;
 }
