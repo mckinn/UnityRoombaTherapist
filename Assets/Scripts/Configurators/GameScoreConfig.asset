@@ -23,4 +23,10 @@ MonoBehaviour:
   padHighRange: 3
   totalAllowedSeconds: 300
   targetWordsForFiftyPercent: 150
-  exitDirtThreshold01: 0.106
+  exitDirtThreshold01: 0.054
+  freezeDirtScore: 1
+  freezeTimeScore: 1
+  freezeDamageScore: 1
+  freezeEmotionsScore: 1
+  freezePadScore: 1
+  freezeTherapistScore: 1

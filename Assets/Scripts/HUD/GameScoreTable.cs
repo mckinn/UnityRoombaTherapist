@@ -59,6 +59,8 @@ public class GameScoreTable : MonoBehaviour
     [Tooltip("Supplies IsFrozen - see Freeze_And_Stop_Implementation_Plan.md. No singleton on this component either, same reason as gameLevelTimer/chatController above. Leave unassigned to disable freeze-snapshot behavior entirely (every row then always computes live, as if never frozen).")]
     [SerializeField] private FreezeController freezeController;
 
+    public float overallScore;
+
     private float dirtScoreSnapshot;
     private float timeScoreSnapshot;
     private float damageScoreSnapshot;
@@ -141,7 +143,7 @@ public class GameScoreTable : MonoBehaviour
         // OVERALL has no freeze toggle of its own - always the live
         // weighted sum of whatever the six values above currently are,
         // whichever of them are frozen or live this frame.
-        float overallScore = ComputeOverallScore(dirtScore, timeScore, damageScore, emotionsScore, padScore, therapistScore);
+        overallScore = ComputeOverallScore(dirtScore, timeScore, damageScore, emotionsScore, padScore, therapistScore);
 
         rowOverall?.SetScore(overallScore);
         rowDirt?.SetScore(dirtScore);
