@@ -119,6 +119,11 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!4 &28599090 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5595029331757407621, guid: 625a16b402cfd487494f48992994e27e, type: 3}
+  m_PrefabInstance: {fileID: 4384326241555691564}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &110627709 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8306081543853789039, guid: 625a16b402cfd487494f48992994e27e, type: 3}
@@ -300,6 +305,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6661464360818668835, guid: 04edd7db8eccc4a7abbb77ea1eda35a4, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2038139662}
+    - targetCorrespondingSourceObject: {fileID: 6661464360818668835, guid: 04edd7db8eccc4a7abbb77ea1eda35a4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2038139663}
   m_SourcePrefab: {fileID: 100100000, guid: 04edd7db8eccc4a7abbb77ea1eda35a4, type: 3}
 --- !u!1001 &295320915
 PrefabInstance:
@@ -2221,8 +2229,8 @@ Transform:
   m_GameObject: {fileID: 1734399633}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 1, y: 0.5, z: 1.5}
-  m_LocalScale: {x: 0.25, y: 1, z: 1}
+  m_LocalPosition: {x: 1, y: 0.5, z: 0.75}
+  m_LocalScale: {x: 2, y: 1, z: 0.25}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 110627709}
@@ -3547,6 +3555,22 @@ MonoBehaviour:
   egressExitDetector: {fileID: 1734399635}
   gameScoreTable: {fileID: 1851344228}
   freezeFrame: {fileID: 1772281262}
+--- !u!114 &2038139663
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2038139637}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a70847fdd4384246a12a1a9fb6bf0d4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FurnitureDisplacementTracker
+  furnitureRoot: {fileID: 28599090}
+  pollIntervalSeconds: 1
+  midpointDistance: 0.2
+  steepness: 1.25
 --- !u!1 &2044373169 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 239975615057030615, guid: 625a16b402cfd487494f48992994e27e, type: 3}
@@ -4002,7 +4026,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5317318152158754676, guid: 625a16b402cfd487494f48992994e27e, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7142257596094474511, guid: 625a16b402cfd487494f48992994e27e, type: 3}
       propertyPath: m_TagString

@@ -18,7 +18,7 @@ public class EndBannerController : MonoBehaviour
 
     private bool bannerDisplayed = false;
 
-    private string roombaName = SessionManager.Instance.name;
+    
 
     private void OnEnable()
     {
@@ -52,19 +52,18 @@ public class EndBannerController : MonoBehaviour
     /// </summary>
     private void ShowNextLevelBanner()
     {
-        FillBanner($"Congrats on the new level {roombaName}",
+        FillBanner($"Congrats on the new level {SessionManager.Instance.RoombaName}",
                    $"Well Done!  You can now spend time with your Therapist to determine how to improve if you want.\nYour overall score was {gameScoreTable.overallScore:P0}.\n<shift><Escape> to reset the game\"");
     }
 
     private void ShowNoPowerBanner()
     {
-        FillBanner($"No Power - try again {roombaName}",
+        FillBanner($"No Power - try again {SessionManager.Instance.RoombaName}",
                    $"I'm sorry to see that you ran out of power.\nFocus on getting your speed up - you can consult with your Therapist now to figure out how.\nYour overall score was {gameScoreTable.overallScore:P0}.\n<shift><Escape> to reset the game");
     }
 
     private void FillBanner(string header, string information)
     {
-        
         Debug.Log($"ShowNoPowerBanner: in FillBanner");
         if (!bannerDisplayed)
         {

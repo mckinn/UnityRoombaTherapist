@@ -18,12 +18,12 @@ MonoBehaviour:
   emotionsWeight: 0.1
   padWeight: 0.1
   therapistWeight: 0.2
-  entitySensitivityHighRange: 4
+  entitySensitivityHighRange: 1
   padLowRange: -3
   padHighRange: 3
-  totalAllowedSeconds: 300
+  totalAllowedSeconds: 500
   targetWordsForFiftyPercent: 150
-  exitDirtThreshold01: 0.054
+  exitDirtThreshold01: 0.8
   freezeDirtScore: 1
   freezeTimeScore: 1
   freezeDamageScore: 1

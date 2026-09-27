@@ -71,7 +71,7 @@ public class GameScoreTable : MonoBehaviour
 
     private static readonly string[] RowLabels =
     {
-        "OVERALL", "Dirt Removed", "Time Remaining", "Damage Done", "Emotions", "PAD", "Therapist Need"
+        "Overall Status", "Dirt Removed", "Time Remaining", "Damage Done", "Emotions", "PAD", "Therapist Need"
     };
 
     private GameScoreRow rowOverall;
@@ -198,16 +198,23 @@ public class GameScoreTable : MonoBehaviour
     }
 
     /// <summary>
-    /// Plan section 4.3 - hardcoded stub for this story. No object registry
-    /// or displacement detection exists anywhere in this project yet; a
-    /// dedicated future story (Steve's) will replace this constant with a
-    /// real (total - displacedCount) / total computation once that
-    /// inventory exists. Deliberately not (total - 0) / total with a
-    /// fabricated total, per Plan section 4.3's own reasoning.
+    /// Furniture_Displacement_Implementation_Plan.md (ROOMBA-80) - reads
+    /// FurnitureDisplacementTracker's own destruction-severity curve
+    /// (0 = pristine, 1 = fully destroyed) and inverts it here, the same
+    /// convention ComputeEmotionsScore uses for its own raw sum: this row,
+    /// like every other row in this table, is oriented so 1.0 = best.
+    /// No [SerializeField] wiring needed on this class - like
+    /// DirtProgressReporter/SessionManager, FurnitureDisplacementTracker is
+    /// a self-contained singleton, read directly via its own Instance.
+    /// Falls back to 1f (best case) if no tracker exists in the scene,
+    /// matching the "missing data reads as best case" convention used
+    /// throughout this class.
     /// </summary>
     private float ComputeDamageScore()
     {
-        return 1f;
+        return FurnitureDisplacementTracker.Instance != null
+            ? 1f - FurnitureDisplacementTracker.Instance.CurrentDestructionSeverity01
+            : 1f;
     }
 
     /// <summary>
@@ -225,16 +232,19 @@ public class GameScoreTable : MonoBehaviour
         }
 
         float rawSum = 0f;
+        float high = 0f;
         foreach (EntitySensitivity sensitivity in SessionManager.Instance.EntitySensitivities)
         {
-            if (string.IsNullOrEmpty(sensitivity.emotion) || sensitivity.emotion == "none" || sensitivity.emotion == "ambivalence")
+            if (string.IsNullOrEmpty(sensitivity.emotion) || sensitivity.emotion == "none" || sensitivity.emotion == "ambivalence" || sensitivity.emotion == "destination")
             {
                 continue;
             }
-            rawSum += sensitivity.strength;
+            rawSum += sensitivity.strength; // The more emotional, the lower the score !   Spock wins this one.
+            high += 1.0f;
+            // Debug.Log($"GameScoreTable: {sensitivity.emotion}, {sensitivity.entity_type} , {sensitivity.strength} , {rawSum}, {high}");
         }
 
-        float high = config.EntitySensitivityHighRange;
+        // float high = config.EntitySensitivityHighRange;
         if (high <= 0f)
         {
             return 1f;
