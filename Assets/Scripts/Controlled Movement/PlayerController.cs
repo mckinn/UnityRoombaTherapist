@@ -39,6 +39,9 @@ public class PlayerController : MonoBehaviour
     [Tooltip("When enabled (default), pressing Space will NOT trigger a jump while a UI text field (e.g. the therapist chat input) currently has keyboard focus. Turn off to restore the old behavior of jumping on Space regardless of focus.")]
     [SerializeField] private bool suppressJumpWhileTextFieldFocused = true;
 
+    [Tooltip("Supplies the CoverageGrid this planner operates on.")]
+    [SerializeField] private ArenaCoverageController arenaCoverageController;
+
     private Rigidbody rb;
 
     private void Awake()
@@ -81,6 +84,11 @@ public class PlayerController : MonoBehaviour
         rb.MovePosition(rb.position + movement);
 
         rb.MoveRotation(Quaternion.LookRotation(direction, Vector3.up));
+        
+        // trying to get journeys to mark cells as traversed.
+        CoverageGrid grid = arenaCoverageController.Grid;
+        Vector2Int currentCell = grid.WorldToCell(transform.position);
+        grid.MarkVisited(currentCell);
     }
 
     /// <summary>
