@@ -25,6 +25,9 @@
 # present on disk for the Unity Editor, but most are not pushed to git).
 /[Aa]ssets/*
 
+# ignore any direectories that begin with Claude
+/[Cc]laude*/*
+
 # Scripts: fully tracked (all .cs, Configurators/), except the
 # scaffolding-for-review subfolder below, which stays ignored.
 !/[Aa]ssets/Scripts/

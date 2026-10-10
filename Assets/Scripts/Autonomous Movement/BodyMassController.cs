@@ -34,10 +34,10 @@ public class BodyMassController : MonoBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        Debug.Log("BodyMassController: in Start");
+        // Debug.Log("BodyMassController: in Start");
         if (SessionManager.Instance != null)
         {
-            Debug.Log("BodyMassController: in Start - adding HandlePadUpdate");
+            // Debug.Log("BodyMassController: in Start - adding HandlePadUpdate");
             SessionManager.Instance.OnStateUpdated += HandlePadUpdate;
         }
     }
@@ -48,7 +48,7 @@ public class BodyMassController : MonoBehaviour
         /// "[delayed]" is used to ensure that the desired value is completely entered before the mass is clamped between them
         float oldMass = currentMass;
         currentMass = Mathf.Clamp(currentMass, minimumMassOfRoomba, maximumMassOfRoomba);
-        Debug.Log($"BodyMassController : OnValidate called for Roomba Mass: Minimum {minimumMassOfRoomba}, Maximum: {maximumMassOfRoomba}, Current: {currentMass}");
+        // Debug.Log($"BodyMassController : OnValidate called for Roomba Mass: Minimum {minimumMassOfRoomba}, Maximum: {maximumMassOfRoomba}, Current: {currentMass}");
         if ( currentMass != oldMass )
         {
             // the currentMass value has fallen outside the new mass bounds and needs to be changed, regardless of the PAD value.
@@ -63,10 +63,10 @@ public class BodyMassController : MonoBehaviour
     private void OnEnable()
 
     {
-        Debug.Log("BodyMassController: in OnEnable");
+        // Debug.Log("BodyMassController: in OnEnable");
         if (SessionManager.Instance != null)
         {
-            Debug.Log("BodyMassController: in OnEnable - adding HandlePadUpdate");
+            // Debug.Log("BodyMassController: in OnEnable - adding HandlePadUpdate");
             SessionManager.Instance.OnStateUpdated -= HandlePadUpdate;
             SessionManager.Instance.OnStateUpdated += HandlePadUpdate;
             HandlePadUpdate(); // pick up whatever state already exists
@@ -75,7 +75,7 @@ public class BodyMassController : MonoBehaviour
 
     private void OnDisable()
     {
-        Debug.Log("BodyMassController: in OnDisable"); 
+        // Debug.Log("BodyMassController: in OnDisable"); 
         if (SessionManager.Instance != null)
         {
             SessionManager.Instance.OnStateUpdated -= HandlePadUpdate;
@@ -84,12 +84,12 @@ public class BodyMassController : MonoBehaviour
 
     private void HandlePadUpdate()
     {
-        Debug.Log("BodyMassController: in HandlePadUpdate");
+        // Debug.Log("BodyMassController: in HandlePadUpdate");
         if (SessionManager.Instance != null )
         {
             float currentPadDominance = SessionManager.Instance.CurrentPad.dominance;
             float newMass = ComputeMass(currentPadDominance);
-            Debug.Log($"BodyMassController: in HandlePadUpdate, Dominance: {currentPadDominance}, currentMass {currentMass}, newMass {newMass}");
+            // Debug.Log($"BodyMassController: in HandlePadUpdate, Dominance: {currentPadDominance}, currentMass {currentMass}, newMass {newMass}");
             if (newMass != currentMass)
             {
                 Debug.Log("BodyMassController: in HandlePadUpdate"); 

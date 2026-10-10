@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -34,13 +35,13 @@ public class JourneyCalculator : MonoBehaviour
     [Tooltip("The per-emotion L/H distance bounds asset.")]
     [SerializeField] private EmotionMovementConfig movementConfig;
 
-    [Header("Managed Pause (Step 7, sub-phase 1)")]
-    [Tooltip("The Paused gate - checked first, before any other dispatch logic. See PauseController's own header comment and Planning.md, 'Managed Pause'. Sub-phase 1: only a debug manual trigger exists yet - real entry triggers (settle-detection, dialog activity, nothing_to_do, arena-entry, Orchestrator should_pause) come in later sub-phases, but the gate mechanism itself is real, not a stub.")]
+    [Header("Managed Pause")]
+    [Tooltip("The Paused gate - see PauseController's own header comment and Pause_Redesign_Implementation_Plan.md. As of 2026-09-18, Paused gates ONLY the autonomous Clean/Map fallback (see FixedUpdate/DriveCleanMap below) - an active, unresolved Journey (emotion- or LLM-driven) keeps evaluating and moving regardless of IsPaused. There is no local auto-pause trigger of any kind here any more; IsPaused only ever changes via an LLM pause_directive or the debug key, both handled entirely inside PauseController/SessionManager.")]
     [SerializeField] private PauseController pauseController;
 
-    [Header("Managed Pause (Step 7, sub-phase 2)")]
-    [Tooltip("Entry trigger 1: detects a Journey settling (all active Journeys just resolved) and calls Pause() - see JourneySettleDetector's own header comment for why this is called inline rather than independently ticked.")]
-    [SerializeField] private JourneySettleDetector journeySettleDetector;
+    [Header("Freeze (Freeze_And_Stop_Implementation_Plan.md)")]
+    [Tooltip("The Freeze latch - a separate gate from Paused above, not a stronger version of it. IsFrozen gates DriveCleanMap (both call sites, same as isPaused does) AND keyboard input (both call sites) - unlike Paused, which never touches keyboard. An already-active, unresolved Journey still keeps moving regardless of IsFrozen, exactly as it does regardless of IsPaused, so it runs to completion rather than cutting off mid-motion; what IsFrozen actually prevents is any NEW or re-activated Journey - see HandleEntityCollision and HandleLLMDirective below, both of which no-op while frozen.")]
+    [SerializeField] private FreezeController freezeController;
 
     /// <summary>
     /// The resolved journey to currently express, or null if anything is
@@ -63,6 +64,9 @@ public class JourneyCalculator : MonoBehaviour
     [Header("Debug")]
     [Tooltip("Testing aid: when true, keyboard input is added on top of the blended Journey movement instead of being ignored. Lets you mock the effect of an additional simultaneous movement source before Step 7 actually produces one. Leave false for normal play - this deliberately reintroduces the authority conflict the single-caller design otherwise prevents.")]
     [SerializeField] private bool allowManualNudgeDuringJourney = false;
+
+    [Tooltip("Whether Arrow Key navigation is allowed at all.")]
+    [SerializeField] private bool wasdAllowed = true;
 
     [Tooltip("Minimum seconds between blend-diagnostic log lines (see ComputeBlendedJourneyDirection) - throttled since it would otherwise log every FixedUpdate tick while 2+ journeys are simultaneously active.")]
     [SerializeField] private float blendDiagnosticLogIntervalSeconds = 0.5f;
@@ -140,9 +144,24 @@ public class JourneyCalculator : MonoBehaviour
     /// LastKnownPosition/Resolved) are refreshed; stuck-recovery
     /// bookkeeping runs uninterrupted across repeated collisions, exactly
     /// as it does across repeated FixedUpdate ticks with none at all.
+    ///
+    /// Extended 2026-09-25 (Freeze_And_Stop_Implementation_Plan.md): no-ops
+    /// entirely while frozen, before even checking sensitivity - a fresh
+    /// collision during a Freeze must not create or re-activate a Journey,
+    /// which is the actual mechanism behind "should just not restart
+    /// again." In practice this rarely fires once frozen anyway, since
+    /// movement is also gated in FixedUpdate by then - but something else
+    /// moving into a stationary Roomba (as happened with the door's own
+    /// animation once) is exactly the scenario this guards against.
     /// </summary>
     private void HandleEntityCollision(EntityIdentity identity, string entityType, Vector3 contactPoint)
     {
+        if (freezeController != null && freezeController.IsFrozen)
+        {
+            Debug.Log($"JourneyCalculator: collision with entity_type '{entityType}' ignored - frozen.");
+            return;
+        }
+
         EntitySensitivity sensitivity = SessionManager.Instance.GetSensitivity(entityType);
 
         if (sensitivity == null)
@@ -278,6 +297,19 @@ public class JourneyCalculator : MonoBehaviour
             return;
         }
 
+        // Extended 2026-09-25 (Freeze_And_Stop_Implementation_Plan.md): a
+        // movement_directive can re-activate (un-resolve) an already-
+        // existing Journey just as effectively as a fresh collision can -
+        // see this method's own DestinationDistance/Resolved assignment
+        // below - so it needs the same no-op-while-frozen guard
+        // HandleEntityCollision has, for the same "should not restart
+        // again" reason.
+        if (freezeController != null && freezeController.IsFrozen)
+        {
+            Debug.Log($"JourneyCalculator: movement_directive for entity_id={directive.target_entity_id} ignored - frozen.");
+            return;
+        }
+
         if (!activeJourneys.TryGetValue(directive.target_entity_id, out ActiveJourney journey))
         {
             Debug.LogWarning($"JourneyCalculator: movement_directive targets entity_id={directive.target_entity_id}, " +
@@ -370,13 +402,13 @@ public class JourneyCalculator : MonoBehaviour
             return;
         }
 
-        float destinationDistance = movementConfig.ComputeDestinationDistance("ambivalence", 0f);
+        float destinationDistance = movementConfig.ComputeDestinationDistance("destination", 0f);
 
         activeJourneys[entityId] = new ActiveJourney
         {
             Entity = identity,
             EntityType = entityType,
-            Emotion = "ambivalence",
+            Emotion = "destination",
             Strength = 0f,
             DestinationDistance = destinationDistance,
             LastKnownPosition = position,
@@ -391,6 +423,42 @@ public class JourneyCalculator : MonoBehaviour
                   $"position={position}, D={destinationDistance:F2} (inert until a movement_directive targets it).");
     }
 
+    /// <summary>
+    /// Updated 2026-09-18 (Pause_Redesign_Implementation_Plan.md section
+    /// 5.5): Paused no longer gates this whole method. It previously sat as
+    /// a top-of-method early return that froze EVERYTHING - Journey
+    /// evaluation (including stuck-timers), Clean/Map, all of it - which is
+    /// exactly the "Journeys interrupted by pause" behavior the redesign
+    /// eliminates. Journeys (emotion- or LLM-driven) are not interruptable
+    /// by Paused any more: ComputeBlendedJourneyDirection, EvaluateJourney,
+    /// and CheckJourneyStuckAndMaybeRedirect all keep running and the
+    /// blended Move() call still happens, paused or not. isPaused gates
+    /// exactly one thing - DriveCleanMap, at both call sites below - which
+    /// is what makes autonomous exploration (and therefore incidental dirt
+    /// collection via Clean/Map) actually stop during a pause. Keyboard is
+    /// unconditional with respect to Paused specifically - see the next
+    /// paragraph for isFrozen, which is a different story.
+    ///
+    /// There is also no more settle-detection call here at all (see
+    /// PauseController's header comment) - a Journey settling into
+    /// StableExpressionJourney never itself changes IsPaused. What happens
+    /// next when everything resolves is ordinary dispatch priority: Clean/
+    /// Map picks up if there's coverage left and nothing else claims the
+    /// frame, or the Roomba simply has nothing to move toward if
+    /// nothing_to_do is true - neither case touches pause state.
+    ///
+    /// Extended 2026-09-25 (Freeze_And_Stop_Implementation_Plan.md):
+    /// isFrozen gates DriveCleanMap at both call sites, same as isPaused -
+    /// AND keyboard input at both its call sites too, unlike isPaused,
+    /// per Steve's call that manual/arrow navigation should also freeze
+    /// ("this is an opportunity for discussion and observation, not
+    /// further gameplay"). Exactly like Paused, an already-active,
+    /// unresolved Journey's blended Move() call (below) is NOT gated by
+    /// isFrozen - it keeps running to completion rather than cutting off
+    /// mid-motion. What Freeze actually prevents starting or restarting is
+    /// enforced upstream of this method entirely, in HandleEntityCollision
+    /// and HandleLLMDirective.
+    /// </summary>
     private void FixedUpdate()
     {
         // PADState is a class, not a struct - it can be null before a
@@ -402,24 +470,8 @@ public class JourneyCalculator : MonoBehaviour
             ? movementConfig.ComputeClosingSpeed(SessionManager.Instance.CurrentPad.arousal)
             : movementConfig.MinClosingSpeed;
 
-        if (pauseController != null && pauseController.IsPaused)
-        {
-            // Paused blocks all AUTONOMOUS movement - Journey evaluation
-            // (including its own stuck-timers and resolution checks, which
-            // stay frozen here rather than silently ticking in the
-            // background), Clean/Map, and Behavior pattern motion. It never
-            // blocks the player's own manual control - the player should
-            // always be able to drive the Roomba directly, paused or not,
-            // with no need to unpause first. This is the ONLY thing
-            // FixedUpdate does while paused; everything below is skipped
-            // entirely for this tick.
-            Vector3 pausedKeyboardInput = ReadKeyboardDirection();
-            if (pausedKeyboardInput.sqrMagnitude > 0f)
-            {
-                playerController.Move(pausedKeyboardInput, closingSpeed);
-            }
-            return;
-        }
+        bool isPaused = pauseController != null && pauseController.IsPaused;
+        bool isFrozen = freezeController != null && freezeController.IsFrozen;
 
         Vector3 blendedDirection = ComputeBlendedJourneyDirection();
 
@@ -435,24 +487,33 @@ public class JourneyCalculator : MonoBehaviour
             Vector3 keyboardOverride = ReadKeyboardDirection();
             bool playerIsDriving = keyboardOverride.sqrMagnitude > 0f;
 
-            journeySettleDetector?.CheckSettled(true);
-
             if (playerIsDriving)
             {
-                playerController.Move(keyboardOverride, closingSpeed);
+                // isFrozen here means the Roomba simply sits still this
+                // frame rather than falling through to DriveCleanMap -
+                // manual navigation freezes too (Freeze_And_Stop_
+                // Implementation_Plan.md), it doesn't hand off to autonomy.
+                if (!isFrozen)
+                {
+                    playerController.Move(keyboardOverride, closingSpeed);
+                }
             }
-            else
+            else if (!isPaused && !isFrozen)
             {
+                // Paused/Frozen both gate this autonomous-exploration
+                // fallback - a resolved/settled state with nothing else
+                // claiming the frame.
                 DriveCleanMap(closingSpeed);
             }
 
             return;
         }
 
-        journeySettleDetector?.CheckSettled(false);
-
         if (blendedDirection != Vector3.zero)
         {
+            // Not gated by isPaused - an active Journey (emotion- or
+            // LLM-driven) keeps progressing regardless of Paused. This is
+            // the "Journeys are not interruptable by pause" requirement.
             // Capped at MaxClosingSpeed by ComputeClosingSpeed itself - the
             // same ceiling epsilon was derived from, so this can't violate
             // the deadband guarantee regardless of PAD state or how many
@@ -473,16 +534,25 @@ public class JourneyCalculator : MonoBehaviour
                 // Arousal-driven too, at the same rate a Journey would use
                 // right now - the Roomba's overall responsiveness is a
                 // property of its emotional state, not of who's steering.
-                playerController.Move(keyboardInput, closingSpeed);
+                // isFrozen: same reasoning as the StableExpressionJourney
+                // branch above - manual navigation freezes too, and doesn't
+                // fall through to DriveCleanMap below when it's suppressed.
+                if (!isFrozen)
+                {
+                    playerController.Move(keyboardInput, closingSpeed);
+                }
             }
-            else if (blendedDirection == Vector3.zero)
+            else if (blendedDirection == Vector3.zero && !isPaused && !isFrozen)
             {
                 // True fresh idle (no active journey at all, not even a
-                // debug-nudge situation) and no keyboard input either.
-                // Explicit blendedDirection check, not just "we're inside
-                // this block" - allowManualNudgeDuringJourney could put us
-                // here while a real journey IS active, and Clean/Map must
-                // never contend with that.
+                // debug-nudge situation), no keyboard input, and not
+                // paused or frozen. Explicit blendedDirection check, not
+                // just "we're inside this block" - allowManualNudgeDuringJourney
+                // could put us here while a real journey IS active, and
+                // Clean/Map must never contend with that. The isPaused/
+                // isFrozen checks are the same gates as the
+                // StableExpressionJourney branch above - see this method's
+                // own doc comment.
                 DriveCleanMap(closingSpeed);
             }
         }
@@ -732,9 +802,25 @@ public class JourneyCalculator : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Reads the four arrow keys as a planar direction. Returns
+    /// Vector3.zero unconditionally while a UI text field (e.g. the
+    /// therapist chat input) has keyboard focus - added 2026-09-18
+    /// (Pause_Redesign_Implementation_Plan.md section 5.6) because Unity's
+    /// new Input System reads raw keyboard state regardless of UI focus, so
+    /// arrow keys typed into the chat box were otherwise leaking through as
+    /// movement input. Unlike PlayerController's analogous Jump suppression,
+    /// there's no toggle here to restore the old behavior - arrow-key input
+    /// while typing has no legitimate use, so the check is unconditional.
+    /// </summary>
     private Vector3 ReadKeyboardDirection()
     {
         Vector3 moveInput = Vector3.zero;
+
+        if (InputFocusUtility.IsTextFieldFocused() || !wasdAllowed)
+        {
+            return moveInput;
+        }
 
         if (Keyboard.current.upArrowKey.isPressed) moveInput.z += 1f;
         if (Keyboard.current.downArrowKey.isPressed) moveInput.z -= 1f;

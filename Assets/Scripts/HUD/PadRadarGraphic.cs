@@ -29,7 +29,7 @@ public class PadRadarGraphic : Graphic
 
     protected override void OnPopulateMesh(VertexHelper vh)
     {
-        Debug.Log("OnPopulateMesh called");  
+        // Debug.Log("OnPopulateMesh called");  
         vh.Clear();
 
         Vector2 center = rectTransform.rect.center;
@@ -82,7 +82,7 @@ public class PadRadarGraphic : Graphic
     protected override void OnEnable()
     {
         base.OnEnable();
-        Debug.Log("PadRadarGraphic OnEnable");
+        // Debug.Log("PadRadarGraphic OnEnable");
         if (SessionManager.Instance != null)
         {
             SessionManager.Instance.OnStateUpdated += HandleStateUpdated;
@@ -94,7 +94,7 @@ public class PadRadarGraphic : Graphic
     protected override void OnDisable()
     {
         base.OnDisable();
-        Debug.Log("PadRadarGraphic OnDisable");
+        // Debug.Log("PadRadarGraphic OnDisable");
         if (SessionManager.Instance != null)
         {
             SessionManager.Instance.OnStateUpdated -= HandleStateUpdated;
@@ -103,7 +103,7 @@ public class PadRadarGraphic : Graphic
 
     private void HandleStateUpdated()
     {
-        Debug.Log("in HandleStateUpdated");
+        // Debug.Log("in HandleStateUpdated");
         SetVerticesDirty();
     }
 

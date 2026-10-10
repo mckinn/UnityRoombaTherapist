@@ -12,6 +12,9 @@ TagManager:
   - shelves
   - Structural
   - rug
+  - egressDoor
+  - door
+  - exit
   layers:
   - Default
   - TransparentFX

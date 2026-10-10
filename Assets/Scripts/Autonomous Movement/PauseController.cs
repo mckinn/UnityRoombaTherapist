@@ -2,33 +2,35 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 
 /// <summary>
-/// The Paused gate - see Planning.md, "Managed Pause", for the full
-/// unified design (five entry triggers, one resume condition). This is
-/// sub-phase 1 of that design: the gate mechanism itself, proven in
-/// isolation with a single debug-only manual trigger standing in for all
-/// five real entry triggers, which come in later sub-phases.
+/// The Paused gate - the single source of truth for whether the Roomba is
+/// currently paused. As of 2026-09-18 (Pause_Redesign_Implementation_
+/// Plan.md) this supersedes the original Planning.md "Managed Pause"
+/// design (five entry triggers, one timed resume condition): there is no
+/// more auto-pause of any kind in this design. The only two things that
+/// can ever call
+/// Pause()/Resume() are an LLM pause_directive (see SessionManager.
+/// UpdateState) and the debug key below - nothing settles, nothing times
+/// out, nothing gets trapped into a pause on its own.
 ///
-/// JourneyCalculator checks IsPaused as the very first thing in its own
-/// FixedUpdate, before any other dispatch logic runs. This is what makes
-/// Paused a true gate rather than just another movement-priority tier -
-/// unlike Clean/Map, which sits at the BOTTOM of the dispatch and yields
-/// to everything else, Paused sits ABOVE everything, including an active
-/// Journey, and has to be able to interrupt one that's already running.
-///
-/// Pause()/Resume() are the real entry points real triggers will call in
-/// later sub-phases (settle-detection, nothing_to_do, dialog activity,
-/// arena-entry, Orchestrator should_pause). The debug key exists only to
-/// exercise that same API surface for testing before any real trigger
-/// exists - it calls the exact same methods a real trigger eventually
-/// will, not a separate placeholder path to be replaced later.
+/// Historical note, pending a separate change: JourneyCalculator's own
+/// FixedUpdate still checks IsPaused first and skips ALL movement
+/// (including an active Journey) while true, exactly as it always has.
+/// That's being restructured separately so Paused only gates autonomous
+/// Clean/Map exploration - an already-active emotion/LLM-driven Journey
+/// will no longer be interruptable by a pause once that lands. Until it
+/// does, this file's own behavior (when IsPaused becomes true or false) is
+/// already fully correct and independent of that pending change.
 /// </summary>
 public class PauseController : MonoBehaviour
 {
-    [Tooltip("Starts the Roomba Paused when the scene loads - a temporary stand-in for the real 'entering the Arena' entry trigger (not yet built, see Planning.md). Defaults to true so testing already reflects the intended starting behavior; toggle off in the Inspector for faster iteration if you want the Roomba moving immediately.")]
+    [Tooltip("Starts the Roomba Paused when the scene loads - a Unity-local decision, not an LLM one (see Pause_Redesign_Implementation_Plan.md section 1.1). Defaults to true so testing already reflects the intended starting behavior; toggle off in the Inspector for faster iteration if you want the Roomba moving immediately.")]
     [SerializeField] private bool startPaused = true;
 
-    [Tooltip("Debug-only: toggles Paused on/off for testing, before any real entry trigger exists. Not intended to remain active in normal play once real triggers are wired up in later sub-phases.")]
-    [SerializeField] private Key debugToggleKey = Key.P;
+    [Tooltip("Enable for manual pause/resume testing in the editor and dev builds; disable to hide this override entirely in a built game.")]
+    [SerializeField] private bool debugToggleKeyEnabled = true;
+
+    [Tooltip("Debug-only: manually toggles Paused for testing, independent of any LLM directive. Defaults to Escape (changed 2026-09-17, was P then briefly Home) - a physical, non-printable key present on both Mac and PC keyboards without a Fn combo (Home was awkward on Mac laptops), and never something typed into a text field.")]
+    [SerializeField] private Key debugToggleKey = Key.Escape;
 
     public bool IsPaused { get; private set; }
 
@@ -37,7 +39,7 @@ public class PauseController : MonoBehaviour
         IsPaused = startPaused;
         if (IsPaused)
         {
-            Debug.Log("PauseController: starting Paused (stand-in for the not-yet-built arena-entry trigger).");
+            Debug.Log("PauseController: starting Paused.");
         }
     }
 
@@ -65,7 +67,7 @@ public class PauseController : MonoBehaviour
 
     private void Update()
     {
-        if (Keyboard.current != null && Keyboard.current[debugToggleKey].wasPressedThisFrame)
+        if (debugToggleKeyEnabled && Keyboard.current != null && Keyboard.current[debugToggleKey].wasPressedThisFrame)
         {
             if (IsPaused)
             {

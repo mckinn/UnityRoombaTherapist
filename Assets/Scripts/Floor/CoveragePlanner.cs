@@ -42,10 +42,12 @@ public class CoveragePlanner
         cameFrom[currentCell] = null;
 
         Vector2Int? nearestUnknown = null;
+        // Debug.Log("CoveragePlanner:------------------------------------");
 
         while (frontier.Count > 0)
         {
             Vector2Int cell = frontier.Dequeue();
+            // Debug.Log($"CoveragePlanner: - in {frontier.Count}, {cameFrom.Count}, {cell}, {nearestUnknown}");
 
             if (grid.GetState(cell) == CoverageGrid.CellState.Unknown && cell != currentCell)
             {
@@ -55,6 +57,7 @@ public class CoveragePlanner
 
             foreach (Vector2Int neighbor in grid.GetNeighbors(cell))
             {
+                // Debug.Log($"CoveragePlanner: {neighbor}, {cameFrom.ContainsKey(neighbor)}, {grid.GetState(neighbor) == CoverageGrid.CellState.Blocked}");
                 if (cameFrom.ContainsKey(neighbor))
                 {
                     continue;
@@ -67,6 +70,7 @@ public class CoveragePlanner
                 cameFrom[neighbor] = cell;
                 frontier.Enqueue(neighbor);
             }
+            // Debug.Log($"CoveragePlanner: - out {frontier.Count}, {cameFrom.Count}, {cell}, {nearestUnknown}");
         }
 
         if (nearestUnknown == null)

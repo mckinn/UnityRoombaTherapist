@@ -33,6 +33,26 @@ public class SessionStartResponse
     public List<EntitySensitivity> entity_sensitivities;
 }
 
+/// <summary>
+/// Mirrors models.py's EndSessionRequest exactly - see
+/// Freeze_And_Stop_Implementation_Plan.md. Unity has never called
+/// /session/end before this story; SessionManager.EndSession() is the
+/// first caller.
+/// </summary>
+[System.Serializable]
+public class EndSessionRequest
+{
+    public string session_id;
+}
+
+/// <summary>Mirrors models.py's EndSessionResponse exactly - see EndSessionRequest above.</summary>
+[System.Serializable]
+public class EndSessionResponse
+{
+    public string session_id;
+    public int message_count;
+}
+
 [System.Serializable]
 public class TherapyMessageRequest
 {
@@ -46,7 +66,13 @@ public class OrchestratorResponse
     public string dialog;
     public PADState pad;
     public List<EntitySensitivity> entity_sensitivities;
-    public bool should_pause;
+    // Replaces the old one-directional should_pause: bool (2026-09-18 -
+    // Pause_Redesign_Implementation_Plan.md). Newtonsoft leaves this null
+    // when the JSON key is absent, exactly like movement_directive above -
+    // null means "no opinion this turn, leave pause state exactly as it
+    // is," not "false"/"resume". See SessionManager.UpdateState for how
+    // this dispatches to PauseController.
+    public string pause_directive; // null, "pause", or "resume"
     public MovementDirective movement_directive;
 }
 
@@ -74,6 +100,17 @@ public class EmotionState
     public string entity_type;
     public string emotion;
     public float strength;
+    // Phase 2 (Narrative_Log_Stream_Plan.md section 6) - populated by
+    // CollisionController.BuildEmotionState only when JourneyCalculator
+    // actually created/refreshed a Journey for this entity (see that
+    // method's own doc comment). Left at their defaults (false/null)
+    // otherwise. Mirrors the Python-side EmotionState model in models.py
+    // exactly - the Orchestrator's story_log.record_collision_or_proximity
+    // already expects and handles both. Added 2026-09-18 to fix a compile
+    // error: CollisionController.cs was already written against these two
+    // fields, but they were never added here.
+    public bool journey_started;
+    public float? journey_distance;
 }
 
 [System.Serializable]
